@@ -63,5 +63,6 @@ private:
    void drawBunnyObject(ShaderGL* shader, const CameraGL* camera) const;
    void drawDepthMap() const;
    void drawText(const std::string& text, glm::vec2 start_position) const;
-   void render() const;
+   void calculateAmbientOcclusion(int pass_num);
+   void render();
 };

@@ -1,10 +1,9 @@
 #include "object.h"
 
 ObjectGL::ObjectGL() :
-   AdjacencyMode( false ), VAO( 0 ), VBO( 0 ), IBO( 0 ), DrawMode( 0 ), VerticesCount( 0 ),
-   EmissionColor( 0.0f, 0.0f, 0.0f, 1.0f ), AmbientReflectionColor( 0.2f, 0.2f, 0.2f, 1.0f ),
-   DiffuseReflectionColor( 0.8f, 0.8f, 0.8f, 1.0f ), SpecularReflectionColor( 0.0f, 0.0f, 0.0f, 1.0f ),
-   SpecularReflectionExponent( 0.0f )
+   VAO( 0 ), VBO( 0 ), IBO( 0 ), DrawMode( 0 ), VerticesCount( 0 ), EmissionColor( 0.0f, 0.0f, 0.0f, 1.0f ),
+   AmbientReflectionColor( 0.2f, 0.2f, 0.2f, 1.0f ), DiffuseReflectionColor( 0.8f, 0.8f, 0.8f, 1.0f ),
+   SpecularReflectionColor( 0.0f, 0.0f, 0.0f, 1.0f ), SpecularReflectionExponent( 0.0f )
 {
 }
 
@@ -305,7 +304,7 @@ void ObjectGL::findNormals(
    const std::vector<GLuint>& vertex_indices
 )
 {
-   normals.resize( vertices.size() );
+   normals.resize( vertices.size(), glm::vec3(0.0f) );
    const auto size = static_cast<int>(vertex_indices.size());
    for (int i = 0; i < size; i += 3) {
       const GLuint n0 = vertex_indices[i];
@@ -317,73 +316,6 @@ void ObjectGL::findNormals(
       normals[n2] += normal;
    }
    for (auto& n : normals) glm::normalize( n );
-}
-
-void ObjectGL::findAdjacency(const std::vector<glm::vec3>& vertices, const std::vector<GLuint>& indices)
-{
-   const auto size = static_cast<int>(indices.size());
-
-   assert( size % 3 == 0 );
-
-   std::vector<std::array<GLuint, 3>> unique_faces;
-   std::map<glm::vec3, GLuint, VectorComparison> vertex_to_index;
-   std::map<std::pair<GLuint, GLuint>, std::pair<GLuint, GLuint>> edge_to_adjacent_faces;
-   for (int i = 0; i < size; i += 3) {
-      std::array<GLuint, 3> face{};
-      for (int j = 0; j < 3; ++j) {
-         GLuint index = indices[i + j];
-         const glm::vec3 v = vertices[index];
-         if (vertex_to_index.find( v ) != vertex_to_index.end()) index = vertex_to_index[v];
-         else vertex_to_index[v] = index;
-         face[j] = index;
-      }
-      unique_faces.emplace_back( face );
-
-      const GLuint face_index = i / 3;
-      const auto edge0 = std::make_pair( std::min( face[0], face[1] ), std::max( face[0], face[1] ) );
-      const auto edge1 = std::make_pair( std::min( face[1], face[2] ), std::max( face[1], face[2] ) );
-      const auto edge2 = std::make_pair( std::min( face[0], face[2] ), std::max( face[0], face[2] ) );
-      if (edge_to_adjacent_faces.find( edge0 ) != edge_to_adjacent_faces.end()) {
-         edge_to_adjacent_faces[edge0].second = face_index;
-      }
-      else edge_to_adjacent_faces[edge0] = std::make_pair( face_index, -1 );
-      if (edge_to_adjacent_faces.find( edge1 ) != edge_to_adjacent_faces.end()) {
-         edge_to_adjacent_faces[edge1].second = face_index;
-      }
-      else edge_to_adjacent_faces[edge1] = std::make_pair( face_index, -1 );
-      if (edge_to_adjacent_faces.find( edge2 ) != edge_to_adjacent_faces.end()) {
-         edge_to_adjacent_faces[edge2].second = face_index;
-      }
-      else edge_to_adjacent_faces[edge2] = std::make_pair( face_index, -1 );
-   }
-
-   const auto unique_face_size = static_cast<int>(unique_faces.size());
-   IndexBuffer.reserve( unique_face_size * 6 );
-   for (int i = 0; i < unique_face_size; ++i) {
-      for (int j = 0; j < 3; ++j) {
-         const GLuint f0 = unique_faces[i][j];
-         const GLuint f1 = unique_faces[i][(j + 1) % 3];
-         const auto edge = std::make_pair( std::min( f0, f1 ), std::max( f0, f1 ) );
-
-         assert( edge_to_adjacent_faces.find( edge ) != edge_to_adjacent_faces.end() );
-
-         const std::pair<GLuint, GLuint> faces = edge_to_adjacent_faces[edge];
-         const GLuint adjacent_face_index = faces.first == i ? faces.second : faces.first;
-         if (adjacent_face_index != -1) {
-            for (const auto& f : unique_faces[adjacent_face_index]) {
-               if (f != edge.first && f != edge.second) {
-                  IndexBuffer.emplace_back( f0 );
-                  IndexBuffer.emplace_back( f );
-                  break;
-               }
-            }
-         }
-         else {
-            IndexBuffer.emplace_back( f0 );
-            IndexBuffer.emplace_back( f0 );
-         }
-      }
-   }
 }
 
 bool ObjectGL::readObjectFile(
@@ -441,19 +373,11 @@ bool ObjectGL::readObjectFile(
 
    if (!found_normals) findNormals( normal_buffer, vertex_buffer, vertex_indices );
 
-   if (!AdjacencyMode) {
-      for (size_t i = 0; i < vertex_indices.size(); ++i) {
-         vertices.emplace_back( vertex_buffer[vertex_indices[i]] );
-         if (found_normals) normals.emplace_back( normal_buffer[normal_indices[i]] );
-         else normals.emplace_back( normal_buffer[vertex_indices[i]] );
-         if (found_textures) textures.emplace_back( texture_buffer[texture_indices[i]] );
-      }
-   }
-   else {
-      vertices = std::move( vertex_buffer );
-      normals = std::move( normal_buffer );
-      if (found_textures) textures = std::move( texture_buffer );
-      findAdjacency( vertices, vertex_indices );
+   for (size_t i = 0; i < vertex_indices.size(); ++i) {
+      vertices.emplace_back( vertex_buffer[vertex_indices[i]] );
+      if (found_normals) normals.emplace_back( normal_buffer[normal_indices[i]] );
+      else normals.emplace_back( normal_buffer[vertex_indices[i]] );
+      if (found_textures) textures.emplace_back( texture_buffer[texture_indices[i]] );
    }
    return true;
 }
@@ -461,7 +385,6 @@ bool ObjectGL::readObjectFile(
 void ObjectGL::setObject(GLenum draw_mode, const std::string& obj_file_path)
 {
    DrawMode = draw_mode;
-   AdjacencyMode = DrawMode == GL_TRIANGLES_ADJACENCY;
    std::vector<glm::vec3> vertices, normals;
    std::vector<glm::vec2> textures;
    if (!readObjectFile( vertices, normals, textures, obj_file_path )) return;
@@ -490,7 +413,6 @@ void ObjectGL::setObject(GLenum draw_mode, const std::string& obj_file_path)
    prepareVertexBuffer( n_bytes_per_vertex );
    if (normals_exist) prepareNormal();
    if (textures_exist) prepareTexture( normals_exist );
-   if (AdjacencyMode) prepareIndexBuffer();
 }
 
 void ObjectGL::setObject(
@@ -500,7 +422,6 @@ void ObjectGL::setObject(
 )
 {
    DrawMode = draw_mode;
-   AdjacencyMode = DrawMode == GL_TRIANGLES_ADJACENCY;
    std::vector<glm::vec3> vertices, normals;
    std::vector<glm::vec2> textures;
    if (!readObjectFile( vertices, normals, textures, obj_file_path )) return;
@@ -526,7 +447,6 @@ void ObjectGL::setObject(
    if (normals_exist) prepareNormal();
    prepareTexture( normals_exist );
    addTexture( texture_file_name );
-   if (AdjacencyMode) prepareIndexBuffer();
 }
 
 void ObjectGL::setSquareObject(GLenum draw_mode, bool use_texture)

@@ -66,7 +66,6 @@ public:
    );
    void replaceVertices(const std::vector<glm::vec3>& vertices, bool normals_exist, bool textures_exist);
    void replaceVertices(const std::vector<float>& vertices, bool normals_exist, bool textures_exist);
-   [[nodiscard]] bool isAdjacencyMode() const { return AdjacencyMode; }
    [[nodiscard]] GLuint getVAO() const { return VAO; }
    [[nodiscard]] GLuint getIBO() const { return IBO; }
    [[nodiscard]] GLenum getDrawMode() const { return DrawMode; }
@@ -109,21 +108,7 @@ public:
       glNamedBufferSubData( it->second, 0, sizeof( T ) * data.size(), data.data() );
    }
 
-private:
-   struct VectorComparison
-   {
-      [[nodiscard]] bool operator()(const glm::vec3& a, const glm::vec3& b) const
-      {
-         if (a.x < b.x) return true;
-         else if (a.x == b.x) {
-            if (a.y < b.y) return true;
-            else if (a.y == b.y) if (a.z < b.z) return true;
-         }
-         return false;
-      }
-   };
-
-   bool AdjacencyMode;
+protected:
    GLuint VAO;
    GLuint VBO;
    GLuint IBO;
@@ -155,8 +140,7 @@ private:
       const std::vector<glm::vec3>& vertices,
       const std::vector<GLuint>& vertex_indices
    );
-   void findAdjacency(const std::vector<glm::vec3>& vertices, const std::vector<GLuint>& indices);
-   [[nodiscard]] bool readObjectFile(
+   [[nodiscard]] static bool readObjectFile(
       std::vector<glm::vec3>& vertices,
       std::vector<glm::vec3>& normals,
       std::vector<glm::vec2>& textures,

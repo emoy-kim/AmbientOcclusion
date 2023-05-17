@@ -206,13 +206,11 @@ void RendererGL::setLights() const
 void RendererGL::setBunnyObject() const
 {
    const std::string sample_directory_path = std::string(CMAKE_SOURCE_DIR) + "/samples";
-   BunnyObject->setObject(
-      GL_TRIANGLES,
+   BunnyObject->createSurfaceElements(
       std::string(sample_directory_path + "/Bunny/bunny.obj"),
       std::string(sample_directory_path + "/Bunny/bunny.jpg")
    );
    BunnyObject->setDiffuseReflectionColor( { 1.0f, 1.0f, 1.0f, 1.0f } );
-
 }
 
 void RendererGL::drawBunnyObject(ShaderGL* shader, const CameraGL* camera) const
@@ -222,11 +220,12 @@ void RendererGL::drawBunnyObject(ShaderGL* shader, const CameraGL* camera) const
 
    glBindVertexArray( BunnyObject->getVAO() );
    glBindTextureUnit( 0, BunnyObject->getTextureID( 0 ) );
-   if (!BunnyObject->isAdjacencyMode()) glDrawArrays( BunnyObject->getDrawMode(), 0, BunnyObject->getVertexNum() );
-   else {
-      glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, BunnyObject->getIBO() );
-      glDrawElements( BunnyObject->getDrawMode(), BunnyObject->getIndexNum(), GL_UNSIGNED_INT, nullptr );
-   }
+   glDrawArrays( BunnyObject->getDrawMode(), 0, BunnyObject->getVertexNum() );
+}
+
+void RendererGL::calculateAmbientOcclusion(int pass_num)
+{
+
 }
 
 void RendererGL::drawDepthMap() const
@@ -281,13 +280,14 @@ void RendererGL::drawText(const std::string& text, glm::vec2 start_position) con
    glDisable( GL_BLEND );
 }
 
-void RendererGL::render() const
+void RendererGL::render()
 {
    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
    std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
 
    glViewport( 0, 0, FrameWidth, FrameHeight );
+   calculateAmbientOcclusion( 2 );
    drawDepthMap();
 
    std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
