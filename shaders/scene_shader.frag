@@ -40,6 +40,7 @@ uniform mat4 ProjectionMatrix;
 in vec3 position_in_ec;
 in vec3 normal_in_ec;
 in vec2 tex_coord;
+in float ambient_occlusion;
 
 layout (location = 0) out vec4 final_color;
 
@@ -117,5 +118,5 @@ void main()
    if (bool(UseLight)) final_color *= calculateLightingEquation();
    else final_color *= Material.DiffuseColor;
 
-   //final_color *= ambient_occlusion;
+   final_color *= ambient_occlusion;
 }

@@ -225,13 +225,20 @@ void RendererGL::drawBunnyObject(ShaderGL* shader, const CameraGL* camera) const
 
 void RendererGL::calculateAmbientOcclusion(int pass_num)
 {
-
+   const int n = BunnyObject->getSurfaceElementSize();
+   const int m = getGroupSize( (n >> 1) + (n & 1) );
    glUseProgram( AmbientOcclusionShader->getShaderProgram() );
    AmbientOcclusionShader->uniform1i( "Phase", 1 );
-   //glBindImageTexture( 0, layer->getEffectTextureID(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8 );
-   glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, BunnyObject->getSurfaceElementsBuffer() );
-   //glDispatchCompute( getGroupSize(  ), getGroupSize(  ), 1 );
-   glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
+   AmbientOcclusionShader->uniform1i( "SurfaceElementSize", n );
+   glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, BunnyObject->getReceiversBuffer() );
+   glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 1, BunnyObject->getSurfaceElementsBuffer() );
+   glDispatchCompute( m, m, 1 );
+   glMemoryBarrier( GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT );
+
+   //AmbientOcclusionShader->uniform1i( "Phase", 2 );
+   //glDispatchCompute( m, m, 1 );
+   //glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
+
 }
 
 void RendererGL::drawScene() const
@@ -294,7 +301,7 @@ void RendererGL::render()
    std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
 
    if (NeedUpdate) {
-      //calculateAmbientOcclusion( 2 );
+      calculateAmbientOcclusion( 2 );
       NeedUpdate = false;
    }
    drawScene();

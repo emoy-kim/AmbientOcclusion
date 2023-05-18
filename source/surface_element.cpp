@@ -1,12 +1,20 @@
 #include "surface_element.h"
 
 SurfaceElement::SurfaceElement() :
-   ObjectGL(), IDNum( 0 ), TotalElementSize( 0 ), SurfaceElementsBuffer( 0 ), AmbientOcclusionBuffer( 0 )
+   ObjectGL(), IDNum( 0 ), TotalElementSize( 0 ), ReceiversBuffer( 0 ), SurfaceElementsBuffer( 0 )
 {
 }
 
 SurfaceElement::~SurfaceElement()
 {
+}
+
+void SurfaceElement::prepareAmbientOcclusion()
+{
+   constexpr GLuint ambient_occlusion_loc = 3;
+   glVertexArrayAttribFormat( VAO, ambient_occlusion_loc, 3, GL_FLOAT, GL_FALSE, 8 * sizeof( GLfloat ) );
+   glEnableVertexArrayAttrib( VAO, ambient_occlusion_loc );
+   glVertexArrayAttribBinding( VAO, ambient_occlusion_loc, 0 );
 }
 
 float SurfaceElement::getTriangleArea(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2)
@@ -144,16 +152,9 @@ bool SurfaceElement::setVertexListFromObjectFile(
 std::shared_ptr<SurfaceElement::Element> SurfaceElement::getElementList(int id)
 {
    std::shared_ptr<Element> head, ptr;
-   const auto size = static_cast<int>(VertexList.size());
-   for (int i = 0; i < size; ++i) {
-      if (VertexList[i].ID == id) {
-         auto e = std::make_shared<Element>(
-            VertexList[i].Position,
-            VertexList[i].Normal,
-            VertexList[i].Texture,
-            VertexList[i].Area,
-            i
-         );
+   for (const auto& v : VertexList) {
+      if (v.ID == id) {
+         auto e = std::make_shared<Element>( v.Position, v.Normal, v.Texture, v.Area );
          if (head == nullptr) head = e;
          else ptr->Next = e;
          ptr = e;
@@ -316,26 +317,28 @@ void SurfaceElement::createSurfaceElements(const std::string& obj_file_path, con
    if (!setVertexListFromObjectFile( vertices, normals, textures, obj_file_path )) return;
 
    for (size_t i = 0; i < vertices.size(); ++i) {
-      DataBuffer.push_back( vertices[i].x );
-      DataBuffer.push_back( vertices[i].y );
-      DataBuffer.push_back( vertices[i].z );
-      DataBuffer.push_back( normals[i].x );
-      DataBuffer.push_back( normals[i].y );
-      DataBuffer.push_back( normals[i].z );
-      DataBuffer.push_back( textures[i].x );
-      DataBuffer.push_back( textures[i].y );
+      DataBuffer.emplace_back( vertices[i].x );
+      DataBuffer.emplace_back( vertices[i].y );
+      DataBuffer.emplace_back( vertices[i].z );
+      DataBuffer.emplace_back( normals[i].x );
+      DataBuffer.emplace_back( normals[i].y );
+      DataBuffer.emplace_back( normals[i].z );
+      DataBuffer.emplace_back( textures[i].x );
+      DataBuffer.emplace_back( textures[i].y );
+      DataBuffer.emplace_back( 1.0f ); // for ambient occlusion
       VerticesCount++;
    }
    vertices.clear();
    normals.clear();
    textures.clear();
 
-   constexpr int n = 8;
+   constexpr int n = 9;
    const auto n_bytes_per_vertex = static_cast<int>(n * sizeof( GLfloat ));
    prepareVertexBuffer( n_bytes_per_vertex );
    prepareNormal();
    prepareTexture( true );
    addTexture( texture_file_name );
+   prepareAmbientOcclusion();
 
    ElementTree.reset();
    std::shared_ptr<Element> ptr;
@@ -357,17 +360,57 @@ void SurfaceElement::createSurfaceElements(const std::string& obj_file_path, con
    linkTree( ElementTree, nullptr );
 
    TotalElementSize = 0;
+   int height = 0;
+   int index = ElementTree == nullptr ? 0 : 1;
    for (ptr = ElementTree; ptr != nullptr; ptr = ptr->Child != nullptr ? ptr->Child : ptr->Next) {
       TotalElementSize++;
+      if (ptr->Child == nullptr) {
+         ptr->Height = height;
+         ptr->Index = index;
+         height++;
+         index++;
+      }
+   }
+
+   bool done = false;
+   while (!done) {
+      done = true;
+      for (ptr = ElementTree; ptr != nullptr; ptr = ptr->Child != nullptr ? ptr->Child : ptr->Next) {
+         if (ptr->Height >= 0) continue;
+
+         done = false;
+         std::shared_ptr<Element> next = ptr->Child;
+         while (next != nullptr && next != ptr->Next && next->Height >= 0) next = next->Next;
+         if (next == nullptr || next == ptr->Next) {
+            ptr->Height = height;
+            ptr->Index = ptr == ElementTree ? 0 : index;
+            index++;
+         }
+      }
+      height++;
    }
 }
 
 void SurfaceElement::setBuffer()
 {
+   ReceiversBuffer = VBO;
    addCustomBufferObject<ElementForShader>( "surface_elements", TotalElementSize );
-   addCustomBufferObject<GLfloat>( "ambient_occlusion", static_cast<int>(VertexList.size()) );
    SurfaceElementsBuffer = getCustomBufferID( "surface_elements" );
-   AmbientOcclusionBuffer = getCustomBufferID( "ambient_occlusion" );
 
-   //glNamedBufferSubData( IndexMapBuffer, offset, size, ptr );
+   ElementBuffer.clear();
+   ElementBuffer.resize( TotalElementSize );
+   for (auto ptr = ElementTree; ptr != nullptr; ptr = ptr->Child != nullptr ? ptr->Child : ptr->Next) {
+      const int i = ptr->Index;
+      ElementBuffer[i].Position = ptr->Position;
+      ElementBuffer[i].Normal = ptr->Normal;
+      ElementBuffer[i].Texture = ptr->Texture;
+      ElementBuffer[i].Area = ptr->Area;
+      ElementBuffer[i].NextIndex = ptr->Next != nullptr ? ptr->Next->Index : -1;
+      ElementBuffer[i].ChildIndex = ptr->Child != nullptr ? ptr->Child->Index : -1;
+   }
+   glNamedBufferSubData(
+      SurfaceElementsBuffer, 0,
+      static_cast<GLsizei>(TotalElementSize * sizeof( ElementForShader )),
+      ElementBuffer.data()
+   );
 }
