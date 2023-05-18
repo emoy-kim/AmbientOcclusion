@@ -126,12 +126,9 @@ void ShaderGL::setTextUniformLocations()
    Location.Texture[0] = glGetUniformLocation( ShaderProgram, "BaseTexture" );
 }
 
-void ShaderGL::setShadowVolumeUniformLocations()
+void ShaderGL::setAmbientOcclusionUniformLocations()
 {
-   setBasicTransformationUniforms();
-   addUniformLocation( "LightPosition" );
-   addUniformLocation( "Robust" );
-   addUniformLocation( "IsZFailAlgorithm" );
+   addUniformLocation( "Phase" );
 }
 
 void ShaderGL::setSceneUniformLocations(int light_num)

@@ -73,39 +73,19 @@ public:
    [[nodiscard]] GLsizei getIndexNum() const { return static_cast<GLsizei>(IndexBuffer.size()); }
    [[nodiscard]] GLuint getTextureID(int index) const { return TextureID[index]; }
    [[nodiscard]] int getTextureNum() const { return static_cast<int>(TextureID.size()); }
-
-   template<typename T>
-   void addShaderStorageBufferObject(const std::string& name, GLuint binding_index, int data_size)
-   {
-      GLuint buffer;
-      glCreateBuffers( 1, &buffer );
-      glBindBufferBase( GL_SHADER_STORAGE_BUFFER, binding_index, buffer );
-      glBufferStorage( GL_SHADER_STORAGE_BUFFER, sizeof( T ) * data_size, nullptr, GL_DYNAMIC_DRAW );
-      CustomBuffers[name] = buffer;
-   }
-
-   template<typename T>
-   void addCustomBufferObject(
-      const std::string& name,
-      GLenum target,
-      const std::vector<T>& data,
-      GLenum usage
-   )
-   {
-      GLuint buffer;
-      glCreateBuffers( 1, &buffer );
-      glBindBuffer( target, buffer );
-      glBufferStorage( target, sizeof( T ) * data.size(), data.data(), usage );
-      CustomBuffers[name] = buffer;
-   }
-
-   template<typename T>
-   void updateCustomBufferObject(const std::string& name, const std::vector<T>& data)
+   [[nodiscard]] GLuint getCustomBufferID(const std::string& name) const
    {
       const auto it = CustomBuffers.find( name );
-      if (it == CustomBuffers.end()) return;
+      return it == CustomBuffers.end() ? 0 : it->second;
+   }
 
-      glNamedBufferSubData( it->second, 0, sizeof( T ) * data.size(), data.data() );
+   template<typename T>
+   void addCustomBufferObject(const std::string& name, int data_size)
+   {
+      GLuint buffer = 0;
+      glCreateBuffers( 1, &buffer );
+      glNamedBufferStorage( buffer, sizeof( T ) * data_size, nullptr, GL_DYNAMIC_STORAGE_BIT );
+      CustomBuffers[name] = buffer;
    }
 
 protected:

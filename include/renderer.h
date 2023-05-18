@@ -31,6 +31,7 @@ private:
    inline static RendererGL* Renderer = nullptr;
    GLFWwindow* Window;
    bool Pause;
+   bool NeedUpdate;
    int FrameWidth;
    int FrameHeight;
    int ActiveLightIndex;
@@ -39,10 +40,19 @@ private:
    std::unique_ptr<CameraGL> MainCamera;
    std::unique_ptr<CameraGL> TextCamera;
    std::unique_ptr<ShaderGL> TextShader;
-   std::unique_ptr<ShaderGL> ShadowVolumeShader;
+   std::unique_ptr<ShaderGL> AmbientOcclusionShader;
    std::unique_ptr<ShaderGL> SceneShader;
    std::unique_ptr<SurfaceElement> BunnyObject;
    std::unique_ptr<LightGL> Lights;
+
+   // 16 and 32 do well, anything in between or below is bad.
+   // 32 seems to do well on laptop/desktop Windows Intel and on NVidia/AMD as well.
+   // further hardware-specific tuning might be needed for optimal performance.
+   static constexpr int ThreadGroupSize = 32;
+   [[nodiscard]] int getGroupSize(int size)
+   {
+      return (size + ThreadGroupSize - 1) / ThreadGroupSize;
+   }
 
    void registerCallbacks() const;
    void initialize();
@@ -61,7 +71,7 @@ private:
    void setBunnyObject() const;
 
    void drawBunnyObject(ShaderGL* shader, const CameraGL* camera) const;
-   void drawDepthMap() const;
+   void drawScene() const;
    void drawText(const std::string& text, glm::vec2 start_position) const;
    void calculateAmbientOcclusion(int pass_num);
    void render();

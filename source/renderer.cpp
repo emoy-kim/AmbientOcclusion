@@ -1,11 +1,12 @@
 #include "renderer.h"
 
 RendererGL::RendererGL() :
-   Window( nullptr ), Pause( false ), FrameWidth( 1920 ), FrameHeight( 1080 ), ActiveLightIndex( 0 ),
-   ClickedPoint( -1, -1 ), Texter( std::make_unique<TextGL>() ), MainCamera( std::make_unique<CameraGL>() ),
-   TextCamera( std::make_unique<CameraGL>() ), TextShader( std::make_unique<ShaderGL>() ),
-   ShadowVolumeShader( std::make_unique<ShaderGL>() ), SceneShader( std::make_unique<ShaderGL>() ),
-   BunnyObject( std::make_unique<SurfaceElement>() ), Lights( std::make_unique<LightGL>() )
+   Window( nullptr ), Pause( false ), NeedUpdate( false ), FrameWidth( 1920 ), FrameHeight( 1080 ),
+   ActiveLightIndex( 0 ), ClickedPoint( -1, -1 ), Texter( std::make_unique<TextGL>() ),
+   MainCamera( std::make_unique<CameraGL>() ), TextCamera( std::make_unique<CameraGL>() ),
+   TextShader( std::make_unique<ShaderGL>() ), AmbientOcclusionShader( std::make_unique<ShaderGL>() ),
+   SceneShader( std::make_unique<ShaderGL>() ), BunnyObject( std::make_unique<SurfaceElement>() ),
+   Lights( std::make_unique<LightGL>() )
 {
    Renderer = this;
 
@@ -59,10 +60,8 @@ void RendererGL::initialize()
       std::string(shader_directory_path + "/text.vert").c_str(),
       std::string(shader_directory_path + "/text.frag").c_str()
    );
-   ShadowVolumeShader->setShader(
-      std::string(shader_directory_path + "/shadow_volume.vert").c_str(),
-      std::string(shader_directory_path + "/shadow_volume.frag").c_str(),
-      std::string(shader_directory_path + "/shadow_volume.geom").c_str()
+   AmbientOcclusionShader->setComputeShaders(
+      std::string(shader_directory_path + "/ambient_occlusion.comp").c_str()
    );
    SceneShader->setShader(
       std::string(shader_directory_path + "/scene_shader.vert").c_str(),
@@ -211,6 +210,7 @@ void RendererGL::setBunnyObject() const
       std::string(sample_directory_path + "/Bunny/bunny.jpg")
    );
    BunnyObject->setDiffuseReflectionColor( { 1.0f, 1.0f, 1.0f, 1.0f } );
+   BunnyObject->setBuffer();
 }
 
 void RendererGL::drawBunnyObject(ShaderGL* shader, const CameraGL* camera) const
@@ -226,10 +226,17 @@ void RendererGL::drawBunnyObject(ShaderGL* shader, const CameraGL* camera) const
 void RendererGL::calculateAmbientOcclusion(int pass_num)
 {
 
+   glUseProgram( AmbientOcclusionShader->getShaderProgram() );
+   AmbientOcclusionShader->uniform1i( "Phase", 1 );
+   //glBindImageTexture( 0, layer->getEffectTextureID(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8 );
+   glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, BunnyObject->getSurfaceElementsBuffer() );
+   //glDispatchCompute( getGroupSize(  ), getGroupSize(  ), 1 );
+   glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
 }
 
-void RendererGL::drawDepthMap() const
+void RendererGL::drawScene() const
 {
+   glViewport( 0, 0, FrameWidth, FrameHeight );
    glBindFramebuffer( GL_FRAMEBUFFER, 0 );
    glUseProgram( SceneShader->getShaderProgram() );
    Lights->transferUniformsToShader( SceneShader.get() );
@@ -286,9 +293,11 @@ void RendererGL::render()
 
    std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
 
-   glViewport( 0, 0, FrameWidth, FrameHeight );
-   calculateAmbientOcclusion( 2 );
-   drawDepthMap();
+   if (NeedUpdate) {
+      //calculateAmbientOcclusion( 2 );
+      NeedUpdate = false;
+   }
+   drawScene();
 
    std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
    const auto fps = 1E+6 / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
@@ -307,7 +316,7 @@ void RendererGL::play()
 
    TextShader->setTextUniformLocations();
    SceneShader->setSceneUniformLocations( 1 );
-   ShadowVolumeShader->setShadowVolumeUniformLocations();
+   AmbientOcclusionShader->setAmbientOcclusionUniformLocations();
 
    while (!glfwWindowShouldClose( Window )) {
       if (!Pause) render();

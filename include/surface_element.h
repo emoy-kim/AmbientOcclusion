@@ -8,7 +8,10 @@ public:
    SurfaceElement();
    ~SurfaceElement() override;
 
+   [[nodiscard]] GLuint getSurfaceElementsBuffer() const { return SurfaceElementsBuffer; }
+   [[nodiscard]] GLuint getAmbientOcclusionBuffer() const { return AmbientOcclusionBuffer; }
    void createSurfaceElements(const std::string& obj_file_path, const std::string& texture_file_name);
+   void setBuffer();
 
 private:
    struct Vertex
@@ -29,35 +32,44 @@ private:
    struct Element
    {
       float Area;
+      int Height;
+      int MapIndex;
+      int VertexListIndex;
       glm::vec3 Position;
       glm::vec3 Normal;
       glm::vec2 Texture;
-      std::unique_ptr<Element> Next;
-      std::unique_ptr<Element> Right;
-      std::unique_ptr<Element> Child;
+      std::shared_ptr<Element> Next;
+      std::shared_ptr<Element> Right;
+      std::shared_ptr<Element> Child;
 
-      Element() : Area( 0.0f ), Position( 0.0f ), Normal( 0.0f ), Texture( 0.0f ) {}
-      Element(glm::vec3 position, glm::vec3 normal, glm::vec2 texture, float area) :
-         Area( area ), Position( position ), Normal( normal ), Texture( texture ) {}
-      explicit Element(Element* element) : Element()
-      {
-         if (element != nullptr) {
-            Area = element->Area;
-            Position = element->Position;
-            Normal = element->Normal;
-            Texture = element->Texture;
-            Next = std::move( element->Next );
-            Right = std::move( element->Right );
-            Child = std::move( element->Child );
-         }
-      }
+      Element() :
+         Area( 0.0f ), Height( -1 ), MapIndex( -1 ), VertexListIndex( -1 ), Position( 0.0f ), Normal( 0.0f ),
+         Texture( 0.0f ) {}
+      Element(glm::vec3 position, glm::vec3 normal, glm::vec2 texture, float area, int vertex_list_index) :
+         Area( area ), Height( -1 ), MapIndex( -1 ), VertexListIndex( vertex_list_index ), Position( position ),
+         Normal( normal ), Texture( texture ) {}
+   };
+
+   struct ElementForShader
+   {
+      int NextIndex;
+      int ChildIndex;
+      int OutIndex;
+      float Area;
+      glm::vec3 Position;
+      glm::vec3 Normal;
+      glm::vec2 Texture;
+
+      ElementForShader() = default;
    };
 
    int IDNum;
+   int TotalElementSize;
+   GLuint SurfaceElementsBuffer;
+   GLuint AmbientOcclusionBuffer;
    std::vector<Vertex> VertexList;
-   std::unique_ptr<Element> ElementTree;
+   std::shared_ptr<Element> ElementTree;
 
-   void prepareAmbientOcclusion() const;
    [[nodiscard]] bool setVertexListFromObjectFile(
       std::vector<glm::vec3>& vertices,
       std::vector<glm::vec3>& normals,
@@ -71,10 +83,10 @@ private:
       const std::vector<GLuint>& vertex_indices,
       const std::vector<GLuint>& texture_indices
    );
-   [[nodiscard]] std::list<Element> getElementList(int id);
-   static void getBoundary(glm::vec2& min_point, glm::vec2& max_point, const std::list<Element>& element_list);
-   static float getMedian(const std::list<Element>& element_list, int dimension, float left, float right);
-   [[nodiscard]] std::unique_ptr<Element> createElementTree(std::list<Element>& element_list);
-   static void relocateElementTree(Element* element);
-   static void linkTree(Element* element, Element* next);
+   [[nodiscard]] std::shared_ptr<Element> getElementList(int id);
+   static void getBoundary(glm::vec2& min_point, glm::vec2& max_point, std::shared_ptr<Element>& element_list);
+   static float getMedian(std::shared_ptr<Element>& element_list, int dimension, int n, float left, float right);
+   [[nodiscard]] std::shared_ptr<Element> createElementTree(std::shared_ptr<Element>& element_list);
+   static void relocateElementTree(std::shared_ptr<Element>& element);
+   static void linkTree(std::shared_ptr<Element>& element, const std::shared_ptr<Element>& next);
 };
