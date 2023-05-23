@@ -7,12 +7,10 @@ uniform mat4 ModelViewProjectionMatrix;
 
 layout (location = 0) in vec3 v_position;
 layout (location = 1) in vec3 v_normal;
-layout (location = 2) in vec2 v_tex_coord;
-layout (location = 3) in float v_ambient_occlusion;
+layout (location = 2) in float v_ambient_occlusion;
 
 out vec3 position_in_ec;
 out vec3 normal_in_ec;
-out vec2 tex_coord;
 out float ambient_occlusion;
 
 void main()
@@ -24,8 +22,6 @@ void main()
    vec4 e_normal = ViewMatrix * WorldMatrix * vec4(v_normal, 0.0f);
    position_in_ec = e_position.xyz;
    normal_in_ec = normalize( e_normal.xyz );
-
-   tex_coord = v_tex_coord;
 
    ambient_occlusion = v_ambient_occlusion;
 

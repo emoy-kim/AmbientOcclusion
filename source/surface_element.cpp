@@ -5,14 +5,10 @@ SurfaceElement::SurfaceElement() :
 {
 }
 
-SurfaceElement::~SurfaceElement()
-{
-}
-
 void SurfaceElement::prepareAmbientOcclusion()
 {
-   constexpr GLuint ambient_occlusion_loc = 3;
-   glVertexArrayAttribFormat( VAO, ambient_occlusion_loc, 3, GL_FLOAT, GL_FALSE, 8 * sizeof( GLfloat ) );
+   constexpr GLuint ambient_occlusion_loc = 2;
+   glVertexArrayAttribFormat( VAO, ambient_occlusion_loc, 1, GL_FLOAT, GL_FALSE, 6 * sizeof( GLfloat ) );
    glEnableVertexArrayAttrib( VAO, ambient_occlusion_loc );
    glVertexArrayAttribBinding( VAO, ambient_occlusion_loc, 0 );
 }
@@ -59,6 +55,7 @@ void SurfaceElement::setVertexList(
    }
    for (auto& v : VertexList) glm::normalize( v.Normal );
 
+   // use the texture coordinates to separate vertices and construct hierarchy.
    int id = 0;
    std::vector<int> visit(textures.size(), 0);
    for (int i = 0; i < static_cast<int>(textures.size()); ++i) {
@@ -91,7 +88,6 @@ void SurfaceElement::setVertexList(
 bool SurfaceElement::setVertexListFromObjectFile(
    std::vector<glm::vec3>& vertices,
    std::vector<glm::vec3>& normals,
-   std::vector<glm::vec2>& textures,
    const std::string& file_path
 )
 {
@@ -140,12 +136,14 @@ bool SurfaceElement::setVertexListFromObjectFile(
 
    setVertexList( vertex_buffer, texture_buffer, vertex_indices, texture_indices );
 
-   for (size_t i = 0; i < vertex_indices.size(); ++i) {
-      vertices.emplace_back( VertexList[vertex_indices[i]].Position );
-      normals.emplace_back( VertexList[vertex_indices[i]].Normal );
-      //textures.emplace_back( VertexList[vertex_indices[i]].Texture );
-      textures.emplace_back( texture_buffer[texture_indices[i]] );
+   // render with glDrawElements for efficiency, but some .obj files have the different sizes of vertex and texture
+   // coordinates. (which means vertex_buffer.size() != texture_buffer.size())
+   // skip the texture setup although the texture coordinates is used as a separator.
+   for (int i = 0; i < static_cast<int>(vertex_buffer.size()); ++i) {
+      vertices.emplace_back( VertexList[i].Position );
+      normals.emplace_back( VertexList[i].Normal );
    }
+   IndexBuffer = std::move( vertex_indices );
    return true;
 }
 
@@ -168,11 +166,11 @@ void SurfaceElement::getBoundary(glm::vec2& min_point, glm::vec2& max_point, std
    min_point = glm::vec2(std::numeric_limits<float>::max());
    max_point = glm::vec2(std::numeric_limits<float>::lowest());
    for (auto ptr = element_list; ptr != nullptr; ptr = ptr->Next) {
-      if (ptr->Texture.x < min_point.x) min_point.x = ptr->Texture.x;
-      if (ptr->Texture.y < min_point.y) min_point.y = ptr->Texture.y;
+      if (ptr->Separator.x < min_point.x) min_point.x = ptr->Separator.x;
+      if (ptr->Separator.y < min_point.y) min_point.y = ptr->Separator.y;
 
-      if (ptr->Texture.x > max_point.x) max_point.x = ptr->Texture.x;
-      if (ptr->Texture.y > max_point.y) max_point.y = ptr->Texture.y;
+      if (ptr->Separator.x > max_point.x) max_point.x = ptr->Separator.x;
+      if (ptr->Separator.y > max_point.y) max_point.y = ptr->Separator.y;
    }
 }
 
@@ -193,7 +191,7 @@ float SurfaceElement::getMedian(
       count = 0;
       median = (left + right) * 0.5f;
       for (auto ptr = element_list; ptr != nullptr; ptr = ptr->Next) {
-         if (ptr->Texture[dimension] < median) count++;
+         if (ptr->Separator[dimension] < median) count++;
       }
       if (count < h0) left = median;
       else right = median;
@@ -219,7 +217,7 @@ std::shared_ptr<SurfaceElement::Element> SurfaceElement::createElementTree(std::
    std::shared_ptr<Element> left, right;
    for (auto ptr = element_list; ptr != nullptr;) {
       std::shared_ptr<Element> next = ptr->Next;
-      if (ptr->Texture[dimension] < median) {
+      if (ptr->Separator[dimension] < median) {
          ptr->Next = left;
          left = ptr;
       }
@@ -313,32 +311,27 @@ void SurfaceElement::createSurfaceElements(const std::string& obj_file_path, con
 {
    DrawMode = GL_TRIANGLES;
    std::vector<glm::vec3> vertices, normals;
-   std::vector<glm::vec2> textures;
-   if (!setVertexListFromObjectFile( vertices, normals, textures, obj_file_path )) return;
+   if (!setVertexListFromObjectFile( vertices, normals, obj_file_path )) return;
 
-   for (size_t i = 0; i < vertices.size(); ++i) {
+   for (int i = 0; i < static_cast<int>(vertices.size()); ++i) {
       DataBuffer.emplace_back( vertices[i].x );
       DataBuffer.emplace_back( vertices[i].y );
       DataBuffer.emplace_back( vertices[i].z );
       DataBuffer.emplace_back( normals[i].x );
       DataBuffer.emplace_back( normals[i].y );
       DataBuffer.emplace_back( normals[i].z );
-      DataBuffer.emplace_back( textures[i].x );
-      DataBuffer.emplace_back( textures[i].y );
       DataBuffer.emplace_back( 1.0f ); // for ambient occlusion
       VerticesCount++;
    }
    vertices.clear();
    normals.clear();
-   textures.clear();
 
-   constexpr int n = 9;
+   constexpr int n = 7;
    const auto n_bytes_per_vertex = static_cast<int>(n * sizeof( GLfloat ));
    prepareVertexBuffer( n_bytes_per_vertex );
    prepareNormal();
-   prepareTexture( true );
-   addTexture( texture_file_name );
    prepareAmbientOcclusion();
+   prepareIndexBuffer();
 
    ElementTree.reset();
    std::shared_ptr<Element> ptr;
@@ -393,6 +386,8 @@ void SurfaceElement::createSurfaceElements(const std::string& obj_file_path, con
 
 void SurfaceElement::setBuffer()
 {
+   assert( VBO != 0 );
+
    ReceiversBuffer = VBO;
    addCustomBufferObject<ElementForShader>( "surface_elements", TotalElementSize );
    SurfaceElementsBuffer = getCustomBufferID( "surface_elements" );
@@ -403,7 +398,7 @@ void SurfaceElement::setBuffer()
       const int i = ptr->Index;
       ElementBuffer[i].Position = ptr->Position;
       ElementBuffer[i].Normal = ptr->Normal;
-      ElementBuffer[i].Texture = ptr->Texture;
+      ElementBuffer[i].Separator = ptr->Separator;
       ElementBuffer[i].Area = ptr->Area;
       ElementBuffer[i].NextIndex = ptr->Next != nullptr ? ptr->Next->Index : -1;
       ElementBuffer[i].ChildIndex = ptr->Child != nullptr ? ptr->Child->Index : -1;

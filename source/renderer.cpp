@@ -1,7 +1,7 @@
 #include "renderer.h"
 
 RendererGL::RendererGL() :
-   Window( nullptr ), Pause( false ), NeedUpdate( false ), FrameWidth( 1920 ), FrameHeight( 1080 ),
+   Window( nullptr ), Pause( false ), NeedUpdate( true ), FrameWidth( 1920 ), FrameHeight( 1080 ),
    ActiveLightIndex( 0 ), ClickedPoint( -1, -1 ), Texter( std::make_unique<TextGL>() ),
    MainCamera( std::make_unique<CameraGL>() ), TextCamera( std::make_unique<CameraGL>() ),
    TextShader( std::make_unique<ShaderGL>() ), AmbientOcclusionShader( std::make_unique<ShaderGL>() ),
@@ -219,26 +219,29 @@ void RendererGL::drawBunnyObject(ShaderGL* shader, const CameraGL* camera) const
    BunnyObject->transferUniformsToShader( shader );
 
    glBindVertexArray( BunnyObject->getVAO() );
-   glBindTextureUnit( 0, BunnyObject->getTextureID( 0 ) );
-   glDrawArrays( BunnyObject->getDrawMode(), 0, BunnyObject->getVertexNum() );
+   glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, BunnyObject->getIBO() );
+   glDrawElements( BunnyObject->getDrawMode(), BunnyObject->getIndexNum(), GL_UNSIGNED_INT, nullptr );
 }
 
 void RendererGL::calculateAmbientOcclusion(int pass_num)
 {
    const int n = BunnyObject->getSurfaceElementSize();
-   const int m = getGroupSize( (n >> 1) + (n & 1) );
+   const auto m = static_cast<int>(std::ceil( std::sqrt( static_cast<float>(n) ) ));
    glUseProgram( AmbientOcclusionShader->getShaderProgram() );
    AmbientOcclusionShader->uniform1i( "Phase", 1 );
+   AmbientOcclusionShader->uniform1i( "M", m );
    AmbientOcclusionShader->uniform1i( "SurfaceElementSize", n );
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, BunnyObject->getReceiversBuffer() );
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 1, BunnyObject->getSurfaceElementsBuffer() );
-   glDispatchCompute( m, m, 1 );
-   glMemoryBarrier( GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT );
+   glDispatchCompute( getGroupSize( m ), getGroupSize( m ), 1 );
+   glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
 
    //AmbientOcclusionShader->uniform1i( "Phase", 2 );
    //glDispatchCompute( m, m, 1 );
    //glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
 
+   glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, 0 );
+   glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 1, 0 );
 }
 
 void RendererGL::drawScene() const
@@ -248,7 +251,6 @@ void RendererGL::drawScene() const
    glUseProgram( SceneShader->getShaderProgram() );
    Lights->transferUniformsToShader( SceneShader.get() );
    glUniform1i( SceneShader->getLocation( "LightIndex" ), ActiveLightIndex );
-   glUniform1i( SceneShader->getLocation( "UseTexture" ), 1 );
    drawBunnyObject( SceneShader.get(), MainCamera.get() );
 }
 

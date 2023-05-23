@@ -6,7 +6,7 @@ class SurfaceElement : public ObjectGL
 {
 public:
    SurfaceElement();
-   ~SurfaceElement() override;
+   ~SurfaceElement() override = default;
 
    [[nodiscard]] GLuint getReceiversBuffer() const { return ReceiversBuffer; }
    [[nodiscard]] GLuint getSurfaceElementsBuffer() const { return SurfaceElementsBuffer; }
@@ -37,14 +37,14 @@ private:
       int Height;
       glm::vec3 Position;
       glm::vec3 Normal;
-      glm::vec2 Texture;
+      glm::vec2 Separator;
       std::shared_ptr<Element> Next;
       std::shared_ptr<Element> Right;
       std::shared_ptr<Element> Child;
 
-      Element() : Area( 0.0f ), Index( -1 ), Height( -1 ), Position( 0.0f ), Normal( 0.0f ), Texture( 0.0f ) {}
-      Element(glm::vec3 position, glm::vec3 normal, glm::vec2 texture, float area) :
-         Area( area ), Index( -1 ), Height( -1 ), Position( position ), Normal( normal ), Texture( texture ) {}
+      Element() : Area( 0.0f ), Index( -1 ), Height( -1 ), Position( 0.0f ), Normal( 0.0f ), Separator( 0.0f ) {}
+      Element(glm::vec3 position, glm::vec3 normal, glm::vec2 separator, float area) :
+         Area( area ), Index( -1 ), Height( -1 ), Position( position ), Normal( normal ), Separator( separator ) {}
    };
 
    struct ElementForShader
@@ -54,7 +54,7 @@ private:
       alignas(16) float Area;
       alignas(16) glm::vec3 Position;
       alignas(16) glm::vec3 Normal;
-      alignas(16) glm::vec2 Texture;
+      alignas(16) glm::vec2 Separator;
 
       ElementForShader() = default;
    };
@@ -71,7 +71,6 @@ private:
    [[nodiscard]] bool setVertexListFromObjectFile(
       std::vector<glm::vec3>& vertices,
       std::vector<glm::vec3>& normals,
-      std::vector<glm::vec2>& textures,
       const std::string& file_path
    );
    [[nodiscard]] static float getTriangleArea(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2);

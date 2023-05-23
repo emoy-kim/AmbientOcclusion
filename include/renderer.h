@@ -49,7 +49,7 @@ private:
    // 32 seems to do well on laptop/desktop Windows Intel and on NVidia/AMD as well.
    // further hardware-specific tuning might be needed for optimal performance.
    static constexpr int ThreadGroupSize = 32;
-   [[nodiscard]] int getGroupSize(int size)
+   [[nodiscard]] static int getGroupSize(int size)
    {
       return (size + ThreadGroupSize - 1) / ThreadGroupSize;
    }

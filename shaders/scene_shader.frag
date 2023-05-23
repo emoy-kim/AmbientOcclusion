@@ -25,9 +25,6 @@ struct MateralInfo {
 };
 uniform MateralInfo Material;
 
-layout (binding = 0) uniform sampler2D BaseTexture;
-uniform int UseTexture;
-
 uniform int UseLight;
 uniform int LightIndex;
 uniform int LightNum;
@@ -39,7 +36,6 @@ uniform mat4 ProjectionMatrix;
 
 in vec3 position_in_ec;
 in vec3 normal_in_ec;
-in vec2 tex_coord;
 in float ambient_occlusion;
 
 layout (location = 0) out vec4 final_color;
@@ -112,8 +108,7 @@ vec4 calculateLightingEquation()
 
 void main()
 {
-   if (bool(UseTexture)) final_color = texture( BaseTexture, tex_coord );
-   else final_color = vec4(one);
+   final_color = vec4(one);
 
    if (bool(UseLight)) final_color *= calculateLightingEquation();
    else final_color *= Material.DiffuseColor;

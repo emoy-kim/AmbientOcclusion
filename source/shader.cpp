@@ -129,6 +129,7 @@ void ShaderGL::setTextUniformLocations()
 void ShaderGL::setAmbientOcclusionUniformLocations()
 {
    addUniformLocation( "Phase" );
+   addUniformLocation( "M" );
    addUniformLocation( "SurfaceElementSize" );
 }
 
@@ -141,8 +142,6 @@ void ShaderGL::setSceneUniformLocations(int light_num)
    Location.MaterialDiffuse = glGetUniformLocation( ShaderProgram, "Material.DiffuseColor" );
    Location.MaterialSpecular = glGetUniformLocation( ShaderProgram, "Material.SpecularColor" );
    Location.MaterialSpecularExponent = glGetUniformLocation( ShaderProgram, "Material.SpecularExponent" );
-
-   Location.Texture[0] = glGetUniformLocation( ShaderProgram, "BaseTexture" );
 
    Location.UseLight = glGetUniformLocation( ShaderProgram, "UseLight" );
    Location.LightNum = glGetUniformLocation( ShaderProgram, "LightNum" );
@@ -161,7 +160,6 @@ void ShaderGL::setSceneUniformLocations(int light_num)
       Location.Lights[i].LightAttenuationFactors = glGetUniformLocation( ShaderProgram, std::string("Lights[" + std::to_string( i ) + "].AttenuationFactors").c_str() );
    }
 
-   addUniformLocation( "UseTexture" );
    addUniformLocation( "LightIndex" );
 }
 
