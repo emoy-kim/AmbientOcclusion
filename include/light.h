@@ -17,8 +17,8 @@ public:
       const glm::vec4& diffuse_color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
       const glm::vec4& specular_color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
       const glm::vec3& spotlight_direction = glm::vec3(0.0f, 0.0f, -1.0f),
-      const float& spotlight_exponent = 0.0f,
-      const float& spotlight_cutoff_angle_in_degree = 180.0f,
+      float spotlight_exponent = 0.0f,
+      float spotlight_cutoff_angle_in_degree = 180.0f,
       const glm::vec3& attenuation_factor = glm::vec3(1.0f, 0.0f, 0.0f)
    );
 

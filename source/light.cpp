@@ -21,8 +21,8 @@ void LightGL::addLight(
    const glm::vec4& diffuse_color,
    const glm::vec4& specular_color,
    const glm::vec3& spotlight_direction,
-   const float& spotlight_exponent,
-   const float& spotlight_cutoff_angle_in_degree,
+   float spotlight_exponent,
+   float spotlight_cutoff_angle_in_degree,
    const glm::vec3& attenuation_factor
 )
 {
