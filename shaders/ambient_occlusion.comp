@@ -1,0 +1,40 @@
+#version 460
+
+layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+struct Vertex
+{
+   float x, y, z, nx, ny, nz, ambient_occlusion;
+};
+
+struct Element
+{
+   int next_index;
+   int child_index;
+   float area;
+   vec3 position;
+   vec3 normal;
+   vec2 texture;
+};
+
+layout (binding = 0, std430) buffer Receivers { Vertex receivers[]; };
+layout (binding = 1, std430) buffer SurfaceElements { Element surface_elements[]; };
+
+uniform int Phase;
+uniform int Side;
+uniform int VertexBufferSize;
+
+const float zero = 0.0f;
+const float one = 1.0f;
+
+void main()
+{
+   int x = int(gl_GlobalInvocationID.x);
+   int y = int(gl_GlobalInvocationID.y);
+   if (x >= Side || y >= Side) return;
+
+   int index = y * Side + x;
+   if (index >= VertexBufferSize) return;
+
+   receivers[index].ambient_occlusion = 0.0f;
+}

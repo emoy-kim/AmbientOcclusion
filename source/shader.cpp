@@ -129,8 +129,8 @@ void ShaderGL::setTextUniformLocations()
 void ShaderGL::setAmbientOcclusionUniformLocations()
 {
    addUniformLocation( "Phase" );
-   addUniformLocation( "M" );
-   addUniformLocation( "SurfaceElementSize" );
+   addUniformLocation( "Side" );
+   addUniformLocation( "VertexBufferSize" );
 }
 
 void ShaderGL::setSceneUniformLocations(int light_num)

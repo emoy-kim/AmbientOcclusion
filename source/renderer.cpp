@@ -225,12 +225,12 @@ void RendererGL::drawBunnyObject(ShaderGL* shader, const CameraGL* camera) const
 
 void RendererGL::calculateAmbientOcclusion(int pass_num)
 {
-   const int n = BunnyObject->getSurfaceElementSize();
+   const int n = BunnyObject->getVertexBufferSize();
    const auto m = static_cast<int>(std::ceil( std::sqrt( static_cast<float>(n) ) ));
    glUseProgram( AmbientOcclusionShader->getShaderProgram() );
    AmbientOcclusionShader->uniform1i( "Phase", 1 );
-   AmbientOcclusionShader->uniform1i( "M", m );
-   AmbientOcclusionShader->uniform1i( "SurfaceElementSize", n );
+   AmbientOcclusionShader->uniform1i( "Side", m );
+   AmbientOcclusionShader->uniform1i( "VertexBufferSize", n );
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, BunnyObject->getReceiversBuffer() );
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 1, BunnyObject->getSurfaceElementsBuffer() );
    glDispatchCompute( getGroupSize( m ), getGroupSize( m ), 1 );

@@ -10,7 +10,7 @@ public:
 
    [[nodiscard]] GLuint getReceiversBuffer() const { return ReceiversBuffer; }
    [[nodiscard]] GLuint getSurfaceElementsBuffer() const { return SurfaceElementsBuffer; }
-   [[nodiscard]] int getSurfaceElementSize() const { return static_cast<int>(VertexList.size()); }
+   [[nodiscard]] int getVertexBufferSize() const { return static_cast<int>(VertexList.size()); }
    void createSurfaceElements(const std::string& obj_file_path, const std::string& texture_file_name);
    void setBuffer();
 
