@@ -11,7 +11,7 @@ public:
    [[nodiscard]] GLuint getReceiversBuffer() const { return ReceiversBuffer; }
    [[nodiscard]] GLuint getSurfaceElementsBuffer() const { return SurfaceElementsBuffer; }
    [[nodiscard]] int getVertexBufferSize() const { return static_cast<int>(VertexList.size()); }
-   void createSurfaceElements(const std::string& obj_file_path, const std::string& texture_file_name);
+   void createSurfaceElements(const std::string& obj_file_path);
    void setBuffer();
 
 private:
@@ -51,10 +51,9 @@ private:
    {
       alignas(16) int NextIndex;
       alignas(16) int ChildIndex;
-      alignas(16) float Area;
+      alignas(16) float AreaOverPi;
       alignas(16) glm::vec3 Position;
       alignas(16) glm::vec3 Normal;
-      alignas(16) glm::vec2 Separator;
 
       ElementForShader() = default;
    };
@@ -67,7 +66,7 @@ private:
    std::shared_ptr<Element> ElementTree;
    std::vector<ElementForShader> ElementBuffer;
 
-   void prepareAmbientOcclusion();
+   void prepareAccessibility();
    [[nodiscard]] bool setVertexListFromObjectFile(
       std::vector<glm::vec3>& vertices,
       std::vector<glm::vec3>& normals,
@@ -86,4 +85,5 @@ private:
    [[nodiscard]] std::shared_ptr<Element> createElementTree(std::shared_ptr<Element>& element_list);
    static void relocateElementTree(std::shared_ptr<Element>& element);
    static void linkTree(std::shared_ptr<Element>& element, const std::shared_ptr<Element>& next);
+   void updateAllElements();
 };

@@ -5,12 +5,12 @@ SurfaceElement::SurfaceElement() :
 {
 }
 
-void SurfaceElement::prepareAmbientOcclusion()
+void SurfaceElement::prepareAccessibility()
 {
-   constexpr GLuint ambient_occlusion_loc = 2;
-   glVertexArrayAttribFormat( VAO, ambient_occlusion_loc, 1, GL_FLOAT, GL_FALSE, 6 * sizeof( GLfloat ) );
-   glEnableVertexArrayAttrib( VAO, ambient_occlusion_loc );
-   glVertexArrayAttribBinding( VAO, ambient_occlusion_loc, 0 );
+   constexpr GLuint accessibility_loc = 2;
+   glVertexArrayAttribFormat( VAO, accessibility_loc, 1, GL_FLOAT, GL_FALSE, 6 * sizeof( GLfloat ) );
+   glEnableVertexArrayAttrib( VAO, accessibility_loc );
+   glVertexArrayAttribBinding( VAO, accessibility_loc, 0 );
 }
 
 float SurfaceElement::getTriangleArea(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2)
@@ -53,7 +53,7 @@ void SurfaceElement::setVertexList(
       VertexList[v2].Area += area;
       VertexList[v2].Normal += normal;
    }
-   for (auto& v : VertexList) glm::normalize( v.Normal );
+   for (auto& v : VertexList) v.Normal = glm::normalize( v.Normal );
 
    // use the texture coordinates to separate vertices and construct hierarchy.
    int id = 0;
@@ -307,7 +307,53 @@ void SurfaceElement::linkTree(std::shared_ptr<Element>& element, const std::shar
    }
 }
 
-void SurfaceElement::createSurfaceElements(const std::string& obj_file_path, const std::string& texture_file_name)
+void SurfaceElement::updateAllElements()
+{
+   TotalElementSize = 0;
+   int height = 0;
+   int index = ElementTree == nullptr ? 0 : 1;
+   std::shared_ptr<Element> ptr;
+   for (ptr = ElementTree; ptr != nullptr; ptr = ptr->Child != nullptr ? ptr->Child : ptr->Next) {
+      TotalElementSize++;
+      if (ptr->Child == nullptr) {
+         ptr->Height = height;
+         ptr->Index = index;
+         index++;
+      }
+   }
+
+   bool done = false;
+   while (!done) {
+      done = true;
+      for (ptr = ElementTree; ptr != nullptr; ptr = ptr->Child != nullptr ? ptr->Child : ptr->Next) {
+         if (ptr->Height >= 0) continue;
+
+         done = false;
+         int child_num = 0;
+         glm::vec3 position(0.0f);
+         glm::vec3 normal(0.0f);
+         float area_sum = 0.0f;
+         std::shared_ptr<Element> next = ptr->Child;
+         while (next != nullptr && next != ptr->Next && next->Height >= 0) {
+            position += next->Position;
+            normal += next->Normal;
+            area_sum += next->Area;
+            next = next->Next;
+            child_num++;
+         }
+         if (next == nullptr || next == ptr->Next) {
+            ptr->Position = position / static_cast<float>(child_num);
+            ptr->Normal = glm::normalize( normal );
+            ptr->Area = area_sum;
+            ptr->Height = height;
+            ptr->Index = ptr == ElementTree ? 0 : index++;
+         }
+      }
+      height++;
+   }
+}
+
+void SurfaceElement::createSurfaceElements(const std::string& obj_file_path)
 {
    DrawMode = GL_TRIANGLES;
    std::vector<glm::vec3> vertices, normals;
@@ -330,7 +376,7 @@ void SurfaceElement::createSurfaceElements(const std::string& obj_file_path, con
    const auto n_bytes_per_vertex = static_cast<int>(n * sizeof( GLfloat ));
    prepareVertexBuffer( n_bytes_per_vertex );
    prepareNormal();
-   prepareAmbientOcclusion();
+   prepareAccessibility();
    prepareIndexBuffer();
 
    ElementTree.reset();
@@ -351,37 +397,7 @@ void SurfaceElement::createSurfaceElements(const std::string& obj_file_path, con
    }
 
    linkTree( ElementTree, nullptr );
-
-   TotalElementSize = 0;
-   int height = 0;
-   int index = ElementTree == nullptr ? 0 : 1;
-   for (ptr = ElementTree; ptr != nullptr; ptr = ptr->Child != nullptr ? ptr->Child : ptr->Next) {
-      TotalElementSize++;
-      if (ptr->Child == nullptr) {
-         ptr->Height = height;
-         ptr->Index = index;
-         height++;
-         index++;
-      }
-   }
-
-   bool done = false;
-   while (!done) {
-      done = true;
-      for (ptr = ElementTree; ptr != nullptr; ptr = ptr->Child != nullptr ? ptr->Child : ptr->Next) {
-         if (ptr->Height >= 0) continue;
-
-         done = false;
-         std::shared_ptr<Element> next = ptr->Child;
-         while (next != nullptr && next != ptr->Next && next->Height >= 0) next = next->Next;
-         if (next == nullptr || next == ptr->Next) {
-            ptr->Height = height;
-            ptr->Index = ptr == ElementTree ? 0 : index;
-            index++;
-         }
-      }
-      height++;
-   }
+   updateAllElements();
 }
 
 void SurfaceElement::setBuffer()
@@ -398,8 +414,7 @@ void SurfaceElement::setBuffer()
       const int i = ptr->Index;
       ElementBuffer[i].Position = ptr->Position;
       ElementBuffer[i].Normal = ptr->Normal;
-      ElementBuffer[i].Separator = ptr->Separator;
-      ElementBuffer[i].Area = ptr->Area;
+      ElementBuffer[i].AreaOverPi = ptr->Area / glm::pi<float>();
       ElementBuffer[i].NextIndex = ptr->Next != nullptr ? ptr->Next->Index : -1;
       ElementBuffer[i].ChildIndex = ptr->Child != nullptr ? ptr->Child->Index : -1;
    }

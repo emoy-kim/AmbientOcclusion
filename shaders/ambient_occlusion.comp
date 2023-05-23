@@ -4,17 +4,16 @@ layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
 struct Vertex
 {
-   float x, y, z, nx, ny, nz, ambient_occlusion;
+   float Px, Py, Pz, Nx, Ny, Nz, Accessibility;
 };
 
 struct Element
 {
-   int next_index;
-   int child_index;
-   float area;
-   vec3 position;
-   vec3 normal;
-   vec2 separator;
+   int NextIndex;
+   int ChildIndex;
+   float AreaOverPi;
+   vec3 Position;
+   vec3 Normal;
 };
 
 layout (binding = 0, std430) buffer Receivers { Vertex receivers[]; };
@@ -26,6 +25,21 @@ uniform int VertexBufferSize;
 
 const float zero = 0.0f;
 const float one = 1.0f;
+const float epsilon = 1e-16f;
+
+float getShadowApproximation(
+   in vec3 v,
+   in float squared_distance,
+   in vec3 receiver_normal,
+   in vec3 emitter_normal,
+   in float emitter_area
+)
+{
+   return
+      (one - inversesqrt( emitter_area / squared_distance + one )) *
+      clamp( dot( emitter_normal, v ), zero, one ) *
+      clamp( 4.0f * dot( receiver_normal, v ), zero, one );
+}
 
 void main()
 {
@@ -36,5 +50,28 @@ void main()
    int index = y * Side + x;
    if (index >= VertexBufferSize) return;
 
-   receivers[index].ambient_occlusion = 0.0f;
+   int emitter_index = 0;
+   int iteration = 20;
+   float total_shadow = zero;
+   vec3 receiver_position = vec3(receivers[index].Px, receivers[index].Py, receivers[index].Pz);
+   vec3 receiver_normal = vec3(receivers[index].Nx, receivers[index].Ny, receivers[index].Nz);
+   while (emitter_index >= 0 && iteration >= 0) {
+      vec3 emitter_position = surface_elements[emitter_index].Position;
+      vec3 emitter_normal = surface_elements[emitter_index].Normal;
+      float emitter_area = surface_elements[emitter_index].AreaOverPi;
+      vec3 v = emitter_position - receiver_position;
+      float squared_distance = dot( v, v ) + epsilon;
+      if (surface_elements[emitter_index].ChildIndex >= 0 && squared_distance < emitter_area * 4.0f) {
+         emitter_index = surface_elements[emitter_index].ChildIndex;
+         iteration = 20;
+         continue;
+      }
+      v *= inversesqrt( squared_distance );
+      float shadow = getShadowApproximation( v, squared_distance, receiver_normal, emitter_normal, emitter_area );
+      //if (Phase == 2)
+      total_shadow += shadow;
+      emitter_index = surface_elements[emitter_index].NextIndex;
+      iteration--;
+   }
+   if (Phase == 1) receivers[index].Accessibility = clamp( one - total_shadow, zero, one );
 }

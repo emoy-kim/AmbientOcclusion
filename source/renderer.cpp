@@ -205,10 +205,7 @@ void RendererGL::setLights() const
 void RendererGL::setBunnyObject() const
 {
    const std::string sample_directory_path = std::string(CMAKE_SOURCE_DIR) + "/samples";
-   BunnyObject->createSurfaceElements(
-      std::string(sample_directory_path + "/Bunny/bunny.obj"),
-      std::string(sample_directory_path + "/Bunny/bunny.jpg")
-   );
+   BunnyObject->createSurfaceElements( std::string(sample_directory_path + "/Bunny/bunny.obj") );
    BunnyObject->setDiffuseReflectionColor( { 1.0f, 1.0f, 1.0f, 1.0f } );
    BunnyObject->setBuffer();
 }

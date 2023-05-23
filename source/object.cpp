@@ -315,7 +315,7 @@ void ObjectGL::findNormals(
       normals[n1] += normal;
       normals[n2] += normal;
    }
-   for (auto& n : normals) glm::normalize( n );
+   for (auto& n : normals) n = glm::normalize( n );
 }
 
 bool ObjectGL::readObjectFile(

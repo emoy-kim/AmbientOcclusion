@@ -7,11 +7,11 @@ uniform mat4 ModelViewProjectionMatrix;
 
 layout (location = 0) in vec3 v_position;
 layout (location = 1) in vec3 v_normal;
-layout (location = 2) in float v_ambient_occlusion;
+layout (location = 2) in float v_accessibility;
 
 out vec3 position_in_ec;
 out vec3 normal_in_ec;
-out float ambient_occlusion;
+out float accessibility;
 
 void main()
 {   
@@ -23,7 +23,7 @@ void main()
    position_in_ec = e_position.xyz;
    normal_in_ec = normalize( e_normal.xyz );
 
-   ambient_occlusion = v_ambient_occlusion;
+   accessibility = v_accessibility;
 
    gl_Position = ModelViewProjectionMatrix * vec4(v_position, 1.0f);
 }
