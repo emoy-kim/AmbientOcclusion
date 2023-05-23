@@ -75,7 +75,7 @@ void SurfaceElement::setVertexList(
                if (visit[texture_indices[j + k]] == 0 || VertexList[vertex_indices[j + k]].ID == 0) {
                   visit[texture_indices[j + k]] = id;
                   VertexList[vertex_indices[j + k]].ID = id;
-                  VertexList[vertex_indices[j + k]].Texture = textures[texture_indices[j + k]];
+                  VertexList[vertex_indices[j + k]].Separator = textures[texture_indices[j + k]];
                   is_changed = true;
                }
             }
@@ -152,7 +152,7 @@ std::shared_ptr<SurfaceElement::Element> SurfaceElement::getElementList(int id)
    std::shared_ptr<Element> head, ptr;
    for (const auto& v : VertexList) {
       if (v.ID == id) {
-         auto e = std::make_shared<Element>( v.Position, v.Normal, v.Texture, v.Area );
+         auto e = std::make_shared<Element>( v.Position, v.Normal, v.Separator, v.Area );
          if (head == nullptr) head = e;
          else ptr->Next = e;
          ptr = e;

@@ -21,13 +21,13 @@ private:
       float Area;
       glm::vec3 Position;
       glm::vec3 Normal;
-      glm::vec2 Texture;
+      glm::vec2 Separator;
 
-      Vertex() : ID( 0 ), Area( 0.0f ), Position( 0.0f ), Normal( 0.0f ), Texture( 0.0f ) {}
+      Vertex() : ID( 0 ), Area( 0.0f ), Position( 0.0f ), Normal( 0.0f ), Separator( 0.0f ) {}
       explicit Vertex(glm::vec3 position) :
-         ID( 0 ), Area( 0.0f ), Position( position ), Normal( 0.0f ), Texture( 0.0f ) {}
-      Vertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texture, float area) :
-         ID( 0 ), Area( area ), Position( position ), Normal( normal ), Texture( texture ) {}
+         ID( 0 ), Area( 0.0f ), Position( position ), Normal( 0.0f ), Separator( 0.0f ) {}
+      Vertex(glm::vec3 position, glm::vec3 normal, glm::vec2 separator, float area) :
+         ID( 0 ), Area( area ), Position( position ), Normal( normal ), Separator( separator ) {}
    };
 
    struct Element

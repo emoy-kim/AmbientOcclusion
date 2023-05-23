@@ -14,7 +14,7 @@ struct Element
    float area;
    vec3 position;
    vec3 normal;
-   vec2 texture;
+   vec2 separator;
 };
 
 layout (binding = 0, std430) buffer Receivers { Vertex receivers[]; };
