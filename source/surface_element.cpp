@@ -207,6 +207,7 @@ float SurfaceElement::getMedian(
    return median;
 }
 
+// create a tree which has child/right subtrees. The original element_list elements will be leaf nodes of this tree.
 std::shared_ptr<SurfaceElement::Element> SurfaceElement::createElementTree(std::shared_ptr<Element>& element_list)
 {
    if (element_list == nullptr || element_list->Next == nullptr) return element_list;
@@ -252,6 +253,7 @@ std::shared_ptr<SurfaceElement::Element> SurfaceElement::createElementTree(std::
    return root;
 }
 
+// relocate the tree so that it has only child/next nodes.
 void SurfaceElement::relocateElementTree(std::shared_ptr<Element>& element)
 {
    if (element == nullptr) return;
@@ -300,6 +302,8 @@ void SurfaceElement::relocateElementTree(std::shared_ptr<Element>& element)
    element->Child = children[0];
 }
 
+// link the last one of a node's children to its next node,
+// so that all the nodes of the tree can be traversed using only child/next nodes.
 void SurfaceElement::linkTree(std::shared_ptr<Element>& element, const std::shared_ptr<Element>& next)
 {
    std::shared_ptr<Element> ptr = element;
@@ -315,6 +319,8 @@ void SurfaceElement::linkTree(std::shared_ptr<Element>& element, const std::shar
    }
 }
 
+// currently, only the leaf nodes have the information such as area, position, and normal.
+// fill the other nodes with information from their children.
 void SurfaceElement::updateAllElements()
 {
    TotalElementSize = 0;
@@ -383,8 +389,7 @@ void SurfaceElement::createSurfaceElements(const std::string& obj_file_path)
    vertices.clear();
    normals.clear();
 
-   constexpr int n = 10;
-   const auto n_bytes_per_vertex = static_cast<int>(n * sizeof( GLfloat ));
+   const auto n_bytes_per_vertex = static_cast<int>(10 * sizeof( GLfloat ));
    prepareVertexBuffer( n_bytes_per_vertex );
    prepareNormal();
    prepareBentNormal();
