@@ -139,9 +139,9 @@ bool SurfaceElement::setVertexListFromObjectFile(
    // render with glDrawElements for efficiency, but some .obj files have the different sizes of vertex and texture
    // coordinates. (which means vertex_buffer.size() != texture_buffer.size())
    // skip the texture setup although the texture coordinates is used as a separator.
-   for (int i = 0; i < static_cast<int>(vertex_buffer.size()); ++i) {
-      vertices.emplace_back( VertexList[i].Position );
-      normals.emplace_back( VertexList[i].Normal );
+   for (const auto& v : VertexList) {
+      vertices.emplace_back( v.Position );
+      normals.emplace_back( v.Normal );
    }
    IndexBuffer = std::move( vertex_indices );
    return true;
