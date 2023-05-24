@@ -13,6 +13,7 @@
 #include "text.h"
 #include "light.h"
 #include "surface_element.h"
+#include "occlusion_tree.h"
 
 class RendererGL final
 {
@@ -47,7 +48,8 @@ private:
    std::unique_ptr<ShaderGL> DynamicAmbientOcclusionShader;
    std::unique_ptr<ShaderGL> HighQualityAmbientOcclusionShader;
    std::unique_ptr<ShaderGL> SceneShader;
-   std::unique_ptr<SurfaceElement> BunnyObject;
+   std::unique_ptr<SurfaceElement> BunnyObjectFromSurfaceElement;
+   std::unique_ptr<OcclusionTree> BunnyObjectFromOcclusionTree;
    std::unique_ptr<LightGL> Lights;
    ALGORITHM_TO_COMPARE AlgorithmToCompare;
 
@@ -73,10 +75,10 @@ private:
    static void mousewheel(GLFWwindow* window, double xoffset, double yoffset);
 
    void setLights() const;
-   void setBunnyObject() const;
+   void setBunnyObjects() const;
 
-   void drawBunnyObject(ShaderGL* shader, const CameraGL* camera) const;
-   void drawScene() const;
+   void drawBunnyObject(ObjectGL* bunny) const;
+   void drawScene(ObjectGL* object) const;
    void drawText(const std::string& text, glm::vec2 start_position) const;
    void calculateDynamicAmbientOcclusion(int pass_num);
    void calculateHighQualityAmbientOcclusion();

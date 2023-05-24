@@ -6,7 +6,8 @@ RendererGL::RendererGL() :
    MainCamera( std::make_unique<CameraGL>() ), TextCamera( std::make_unique<CameraGL>() ),
    TextShader( std::make_unique<ShaderGL>() ), DynamicAmbientOcclusionShader( std::make_unique<ShaderGL>() ),
    HighQualityAmbientOcclusionShader( std::make_unique<ShaderGL>() ), SceneShader( std::make_unique<ShaderGL>() ),
-   BunnyObject( std::make_unique<SurfaceElement>() ), Lights( std::make_unique<LightGL>() ),
+   BunnyObjectFromSurfaceElement( std::make_unique<SurfaceElement>() ),
+   BunnyObjectFromOcclusionTree( std::make_unique<OcclusionTree>() ), Lights( std::make_unique<LightGL>() ),
    AlgorithmToCompare( ALGORITHM_TO_COMPARE::DYNAMIC )
 {
    Renderer = this;
@@ -220,34 +221,36 @@ void RendererGL::setLights() const
    Lights->addLight( light_position, ambient_color, diffuse_color, specular_color );
 }
 
-void RendererGL::setBunnyObject() const
+void RendererGL::setBunnyObjects() const
 {
    const std::string sample_directory_path = std::string(CMAKE_SOURCE_DIR) + "/samples";
-   BunnyObject->createSurfaceElements( std::string(sample_directory_path + "/Bunny/bunny.obj") );
-   BunnyObject->setDiffuseReflectionColor( { 1.0f, 1.0f, 1.0f, 1.0f } );
-   BunnyObject->setBuffer();
+   BunnyObjectFromSurfaceElement->createSurfaceElements( std::string( sample_directory_path + "/Bunny/bunny.obj") );
+   BunnyObjectFromSurfaceElement->setDiffuseReflectionColor( { 1.0f, 1.0f, 1.0f, 1.0f } );
+   BunnyObjectFromSurfaceElement->setBuffer();
+
+   //BunnyObjectFromOcclusionTree
 }
 
-void RendererGL::drawBunnyObject(ShaderGL* shader, const CameraGL* camera) const
+void RendererGL::drawBunnyObject(ObjectGL* bunny) const
 {
-   shader->transferBasicTransformationUniforms( glm::mat4(1.0f), camera );
-   BunnyObject->transferUniformsToShader( shader );
+   SceneShader->transferBasicTransformationUniforms( glm::mat4(1.0f), MainCamera.get() );
+   bunny->transferUniformsToShader( SceneShader.get() );
 
-   glBindVertexArray( BunnyObject->getVAO() );
-   glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, BunnyObject->getIBO() );
-   glDrawElements( BunnyObject->getDrawMode(), BunnyObject->getIndexNum(), GL_UNSIGNED_INT, nullptr );
+   glBindVertexArray( bunny->getVAO() );
+   glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, bunny->getIBO() );
+   glDrawElements( bunny->getDrawMode(), bunny->getIndexNum(), GL_UNSIGNED_INT, nullptr );
 }
 
 void RendererGL::calculateDynamicAmbientOcclusion(int pass_num)
 {
-   const int n = BunnyObject->getVertexBufferSize();
+   const int n = BunnyObjectFromSurfaceElement->getVertexBufferSize();
    const auto m = static_cast<int>(std::ceil( std::sqrt( static_cast<float>(n) ) ));
    const int g = getGroupSize( m );
    glUseProgram( DynamicAmbientOcclusionShader->getShaderProgram() );
    DynamicAmbientOcclusionShader->uniform1i( "Side", m );
    DynamicAmbientOcclusionShader->uniform1i( "VertexBufferSize", n );
-   glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, BunnyObject->getReceiversBuffer() );
-   glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 1, BunnyObject->getSurfaceElementsBuffer() );
+   glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, BunnyObjectFromSurfaceElement->getReceiversBuffer() );
+   glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 1, BunnyObjectFromSurfaceElement->getSurfaceElementsBuffer() );
    for (int i = 1; i <= pass_num; ++i) {
       DynamicAmbientOcclusionShader->uniform1i( "Phase", i );
       glDispatchCompute( g, g, 1 );
@@ -264,7 +267,7 @@ void RendererGL::calculateHighQualityAmbientOcclusion()
    glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
 }
 
-void RendererGL::drawScene() const
+void RendererGL::drawScene(ObjectGL* object) const
 {
    glViewport( 0, 0, FrameWidth, FrameHeight );
    glBindFramebuffer( GL_FRAMEBUFFER, 0 );
@@ -272,7 +275,7 @@ void RendererGL::drawScene() const
    Lights->transferUniformsToShader( SceneShader.get() );
    SceneShader->uniform1i( "UseBentNormal", UseBentNormal ? 1 : 0 );
    SceneShader->uniform1i( "LightIndex", ActiveLightIndex );
-   drawBunnyObject( SceneShader.get(), MainCamera.get() );
+   drawBunnyObject( object );
 }
 
 void RendererGL::drawText(const std::string& text, glm::vec2 start_position) const
@@ -323,14 +326,20 @@ void RendererGL::render()
 
    std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
 
-   if (NeedUpdate) {
-      switch (AlgorithmToCompare) {
-         case ALGORITHM_TO_COMPARE::DYNAMIC: calculateDynamicAmbientOcclusion( PassNum ); break;
-         case ALGORITHM_TO_COMPARE::HIGH_QUALITY: calculateHighQualityAmbientOcclusion(); break;
+   if (AlgorithmToCompare == ALGORITHM_TO_COMPARE::DYNAMIC) {
+      if (NeedUpdate) {
+         calculateDynamicAmbientOcclusion( PassNum );
+         NeedUpdate = false;
       }
-      NeedUpdate = false;
+      drawScene( BunnyObjectFromSurfaceElement.get() );
    }
-   drawScene();
+   else if (AlgorithmToCompare == ALGORITHM_TO_COMPARE::HIGH_QUALITY) {
+      if (NeedUpdate) {
+         calculateHighQualityAmbientOcclusion();
+         NeedUpdate = false;
+      }
+      drawScene( BunnyObjectFromOcclusionTree.get() );
+   }
 
    std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
    const auto fps = 1E+6 / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
@@ -345,7 +354,7 @@ void RendererGL::play()
    if (glfwWindowShouldClose( Window )) initialize();
 
    setLights();
-   setBunnyObject();
+   setBunnyObjects();
 
    TextShader->setTextUniformLocations();
    SceneShader->setSceneUniformLocations( 1 );

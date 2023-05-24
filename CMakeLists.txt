@@ -15,6 +15,7 @@ set(
 		source/object.cpp
 		source/shader.cpp
 		source/renderer.cpp
+		source/occlusion_tree.cpp
 	  	source/surface_element.cpp
 )
 
