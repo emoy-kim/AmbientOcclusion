@@ -42,7 +42,8 @@ public:
    );
    void setComputeShaders(const char* compute_shader_path);
    void setTextUniformLocations();
-   void setAmbientOcclusionUniformLocations();
+   void setDynamicAmbientOcclusionUniformLocations();
+   void setHighQualityAmbientOcclusionUniformLocations();
    void setSceneUniformLocations(int light_num);
    void addUniformLocation(const std::string& name)
    {

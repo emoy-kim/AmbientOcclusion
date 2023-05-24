@@ -28,6 +28,8 @@ public:
    void play();
 
 private:
+   enum class ALGORITHM_TO_COMPARE { DYNAMIC = 0, HIGH_QUALITY };
+
    inline static RendererGL* Renderer = nullptr;
    GLFWwindow* Window;
    bool Pause;
@@ -42,10 +44,12 @@ private:
    std::unique_ptr<CameraGL> MainCamera;
    std::unique_ptr<CameraGL> TextCamera;
    std::unique_ptr<ShaderGL> TextShader;
-   std::unique_ptr<ShaderGL> AmbientOcclusionShader;
+   std::unique_ptr<ShaderGL> DynamicAmbientOcclusionShader;
+   std::unique_ptr<ShaderGL> HighQualityAmbientOcclusionShader;
    std::unique_ptr<ShaderGL> SceneShader;
    std::unique_ptr<SurfaceElement> BunnyObject;
    std::unique_ptr<LightGL> Lights;
+   ALGORITHM_TO_COMPARE AlgorithmToCompare;
 
    // 16 and 32 do well, anything in between or below is bad.
    // 32 seems to do well on laptop/desktop Windows Intel and on NVidia/AMD as well.
@@ -59,7 +63,6 @@ private:
    void registerCallbacks() const;
    void initialize();
    void writeFrame(const std::string& name) const;
-   void writeDepthTexture(const std::string& name) const;
 
    static void printOpenGLInformation();
 
@@ -75,6 +78,7 @@ private:
    void drawBunnyObject(ShaderGL* shader, const CameraGL* camera) const;
    void drawScene() const;
    void drawText(const std::string& text, glm::vec2 start_position) const;
-   void calculateAmbientOcclusion(int pass_num);
+   void calculateDynamicAmbientOcclusion(int pass_num);
+   void calculateHighQualityAmbientOcclusion();
    void render();
 };

@@ -126,11 +126,15 @@ void ShaderGL::setTextUniformLocations()
    Location.Texture[0] = glGetUniformLocation( ShaderProgram, "BaseTexture" );
 }
 
-void ShaderGL::setAmbientOcclusionUniformLocations()
+void ShaderGL::setDynamicAmbientOcclusionUniformLocations()
 {
    addUniformLocation( "Phase" );
    addUniformLocation( "Side" );
    addUniformLocation( "VertexBufferSize" );
+}
+
+void ShaderGL::setHighQualityAmbientOcclusionUniformLocations()
+{
 }
 
 void ShaderGL::setSceneUniformLocations(int light_num)

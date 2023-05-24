@@ -4,9 +4,10 @@ RendererGL::RendererGL() :
    Window( nullptr ), Pause( false ), NeedUpdate( true ), UseBentNormal( true ), FrameWidth( 1920 ), FrameHeight( 1080 ),
    ActiveLightIndex( 0 ), PassNum( 2 ), ClickedPoint( -1, -1 ), Texter( std::make_unique<TextGL>() ),
    MainCamera( std::make_unique<CameraGL>() ), TextCamera( std::make_unique<CameraGL>() ),
-   TextShader( std::make_unique<ShaderGL>() ), AmbientOcclusionShader( std::make_unique<ShaderGL>() ),
-   SceneShader( std::make_unique<ShaderGL>() ), BunnyObject( std::make_unique<SurfaceElement>() ),
-   Lights( std::make_unique<LightGL>() )
+   TextShader( std::make_unique<ShaderGL>() ), DynamicAmbientOcclusionShader( std::make_unique<ShaderGL>() ),
+   HighQualityAmbientOcclusionShader( std::make_unique<ShaderGL>() ), SceneShader( std::make_unique<ShaderGL>() ),
+   BunnyObject( std::make_unique<SurfaceElement>() ), Lights( std::make_unique<LightGL>() ),
+   AlgorithmToCompare( ALGORITHM_TO_COMPARE::DYNAMIC )
 {
    Renderer = this;
 
@@ -60,8 +61,11 @@ void RendererGL::initialize()
       std::string(shader_directory_path + "/text.vert").c_str(),
       std::string(shader_directory_path + "/text.frag").c_str()
    );
-   AmbientOcclusionShader->setComputeShaders(
-      std::string(shader_directory_path + "/ambient_occlusion.comp").c_str()
+   DynamicAmbientOcclusionShader->setComputeShaders(
+      std::string(shader_directory_path + "/dynamic_ambient_occlusion.comp").c_str()
+   );
+   HighQualityAmbientOcclusionShader->setComputeShaders(
+      std::string(shader_directory_path + "/high_quality_ambient_occlusion.comp").c_str()
    );
    SceneShader->setShader(
       std::string(shader_directory_path + "/scene_shader.vert").c_str(),
@@ -85,27 +89,6 @@ void RendererGL::writeFrame(const std::string& name) const
    delete [] buffer;
 }
 
-void RendererGL::writeDepthTexture(const std::string& name) const
-{
-   const int size = FrameWidth * FrameHeight;
-   auto* buffer = new uint8_t[size];
-   auto* raw_buffer = new GLfloat[size];
-   glPixelStorei( GL_PACK_ALIGNMENT, 1 );
-   glReadBuffer( GL_DEPTH_ATTACHMENT );
-   glReadPixels( 0, 0, FrameWidth, FrameHeight, GL_DEPTH_COMPONENT, GL_FLOAT, raw_buffer );
-   for (int i = 0; i < size; ++i) {
-      buffer[i] = static_cast<uint8_t>(MainCamera->linearizeDepthValue( raw_buffer[i] ) * 255.0f);
-   }
-   FIBITMAP* image = FreeImage_ConvertFromRawBits(
-      buffer, FrameWidth, FrameHeight, FrameWidth, 8,
-      FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, false
-   );
-   FreeImage_Save( FIF_PNG, image, name.c_str() );
-   FreeImage_Unload( image );
-   delete [] raw_buffer;
-   delete [] buffer;
-}
-
 void RendererGL::cleanup(GLFWwindow* window)
 {
    glfwSetWindowShouldClose( window, GLFW_TRUE );
@@ -116,22 +99,40 @@ void RendererGL::keyboard(GLFWwindow* window, int key, int scancode, int action,
    if (action != GLFW_PRESS) return;
 
    switch (key) {
+      case GLFW_KEY_1:
+         if (!Renderer->Pause) {
+            Renderer->AlgorithmToCompare = ALGORITHM_TO_COMPARE::DYNAMIC;
+            std::cout << "Dynamic Ambient Occlusion Algorithm Selected\n";
+         }
+         break;
+      case GLFW_KEY_2:
+         if (!Renderer->Pause) {
+            Renderer->AlgorithmToCompare = ALGORITHM_TO_COMPARE::HIGH_QUALITY;
+            std::cout << "High Quality Ambient Occlusion Algorithm Selected\n";
+         }
+         break;
       case GLFW_KEY_UP:
-         Renderer->PassNum++;
-         Renderer->NeedUpdate = true;
-         std::cout << "Pass Num: " << Renderer->PassNum << std::endl;
+         if (!Renderer->Pause) {
+            Renderer->PassNum++;
+            Renderer->NeedUpdate = true;
+            std::cout << "Pass Num: " << Renderer->PassNum << std::endl;
+         }
          break;
       case GLFW_KEY_DOWN:
-         Renderer->PassNum--;
-         Renderer->NeedUpdate = true;
-         if (Renderer->PassNum < 1) Renderer->PassNum = 1;
-         std::cout << "Pass Num: " << Renderer->PassNum << std::endl;
+         if (!Renderer->Pause) {
+            Renderer->PassNum--;
+            Renderer->NeedUpdate = true;
+            if (Renderer->PassNum < 1) Renderer->PassNum = 1;
+            std::cout << "Pass Num: " << Renderer->PassNum << std::endl;
+         }
          break;
       case GLFW_KEY_B:
-         Renderer->UseBentNormal = !Renderer->UseBentNormal;
-         Renderer->NeedUpdate = true;
-         if (Renderer->UseBentNormal) std::cout << "Bent Normal Used\n";
-         else std::cout << "Original Normal Used\n";
+         if (!Renderer->Pause) {
+            Renderer->UseBentNormal = !Renderer->UseBentNormal;
+            Renderer->NeedUpdate = true;
+            if (Renderer->UseBentNormal) std::cout << "Bent Normal Used\n";
+            else std::cout << "Original Normal Used\n";
+         }
          break;
       case GLFW_KEY_C:
          Renderer->writeFrame( "../result.png" );
@@ -237,23 +238,30 @@ void RendererGL::drawBunnyObject(ShaderGL* shader, const CameraGL* camera) const
    glDrawElements( BunnyObject->getDrawMode(), BunnyObject->getIndexNum(), GL_UNSIGNED_INT, nullptr );
 }
 
-void RendererGL::calculateAmbientOcclusion(int pass_num)
+void RendererGL::calculateDynamicAmbientOcclusion(int pass_num)
 {
    const int n = BunnyObject->getVertexBufferSize();
    const auto m = static_cast<int>(std::ceil( std::sqrt( static_cast<float>(n) ) ));
    const int g = getGroupSize( m );
-   glUseProgram( AmbientOcclusionShader->getShaderProgram() );
-   AmbientOcclusionShader->uniform1i( "Side", m );
-   AmbientOcclusionShader->uniform1i( "VertexBufferSize", n );
+   glUseProgram( DynamicAmbientOcclusionShader->getShaderProgram() );
+   DynamicAmbientOcclusionShader->uniform1i( "Side", m );
+   DynamicAmbientOcclusionShader->uniform1i( "VertexBufferSize", n );
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, BunnyObject->getReceiversBuffer() );
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 1, BunnyObject->getSurfaceElementsBuffer() );
    for (int i = 1; i <= pass_num; ++i) {
-      AmbientOcclusionShader->uniform1i( "Phase", i );
+      DynamicAmbientOcclusionShader->uniform1i( "Phase", i );
       glDispatchCompute( g, g, 1 );
       glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
    }
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, 0 );
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 1, 0 );
+}
+
+void RendererGL::calculateHighQualityAmbientOcclusion()
+{
+   glUseProgram( HighQualityAmbientOcclusionShader->getShaderProgram() );
+
+   glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
 }
 
 void RendererGL::drawScene() const
@@ -316,7 +324,10 @@ void RendererGL::render()
    std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
 
    if (NeedUpdate) {
-      calculateAmbientOcclusion( PassNum );
+      switch (AlgorithmToCompare) {
+         case ALGORITHM_TO_COMPARE::DYNAMIC: calculateDynamicAmbientOcclusion( PassNum ); break;
+         case ALGORITHM_TO_COMPARE::HIGH_QUALITY: calculateHighQualityAmbientOcclusion(); break;
+      }
       NeedUpdate = false;
    }
    drawScene();
@@ -338,7 +349,8 @@ void RendererGL::play()
 
    TextShader->setTextUniformLocations();
    SceneShader->setSceneUniformLocations( 1 );
-   AmbientOcclusionShader->setAmbientOcclusionUniformLocations();
+   DynamicAmbientOcclusionShader->setDynamicAmbientOcclusionUniformLocations();
+   HighQualityAmbientOcclusionShader->setHighQualityAmbientOcclusionUniformLocations();
 
    while (!glfwWindowShouldClose( Window )) {
       if (!Pause) render();
