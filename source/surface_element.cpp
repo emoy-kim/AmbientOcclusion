@@ -5,10 +5,18 @@ SurfaceElement::SurfaceElement() :
 {
 }
 
+void SurfaceElement::prepareBentNormal()
+{
+   constexpr GLuint bent_normal_loc = 2;
+   glVertexArrayAttribFormat( VAO, bent_normal_loc, 3, GL_FLOAT, GL_FALSE, 6 * sizeof( GLfloat ) );
+   glEnableVertexArrayAttrib( VAO, bent_normal_loc );
+   glVertexArrayAttribBinding( VAO, bent_normal_loc, 0 );
+}
+
 void SurfaceElement::prepareAccessibility()
 {
-   constexpr GLuint accessibility_loc = 2;
-   glVertexArrayAttribFormat( VAO, accessibility_loc, 1, GL_FLOAT, GL_FALSE, 6 * sizeof( GLfloat ) );
+   constexpr GLuint accessibility_loc = 3;
+   glVertexArrayAttribFormat( VAO, accessibility_loc, 1, GL_FLOAT, GL_FALSE, 9 * sizeof( GLfloat ) );
    glEnableVertexArrayAttrib( VAO, accessibility_loc );
    glVertexArrayAttribBinding( VAO, accessibility_loc, 0 );
 }
@@ -366,16 +374,20 @@ void SurfaceElement::createSurfaceElements(const std::string& obj_file_path)
       DataBuffer.emplace_back( normals[i].x );
       DataBuffer.emplace_back( normals[i].y );
       DataBuffer.emplace_back( normals[i].z );
+      DataBuffer.emplace_back( normals[i].x ); // for bent normal
+      DataBuffer.emplace_back( normals[i].y ); // for bent normal
+      DataBuffer.emplace_back( normals[i].z ); // for bent normal
       DataBuffer.emplace_back( 1.0f ); // for ambient occlusion
       VerticesCount++;
    }
    vertices.clear();
    normals.clear();
 
-   constexpr int n = 7;
+   constexpr int n = 10;
    const auto n_bytes_per_vertex = static_cast<int>(n * sizeof( GLfloat ));
    prepareVertexBuffer( n_bytes_per_vertex );
    prepareNormal();
+   prepareBentNormal();
    prepareAccessibility();
    prepareIndexBuffer();
 

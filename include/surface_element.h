@@ -66,6 +66,7 @@ private:
    std::shared_ptr<Element> ElementTree;
    std::vector<ElementForShader> ElementBuffer;
 
+   void prepareBentNormal();
    void prepareAccessibility();
    [[nodiscard]] bool setVertexListFromObjectFile(
       std::vector<glm::vec3>& vertices,

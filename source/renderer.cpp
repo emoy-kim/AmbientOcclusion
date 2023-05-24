@@ -1,7 +1,7 @@
 #include "renderer.h"
 
 RendererGL::RendererGL() :
-   Window( nullptr ), Pause( false ), NeedUpdate( true ), FrameWidth( 1920 ), FrameHeight( 1080 ),
+   Window( nullptr ), Pause( false ), NeedUpdate( true ), UseBentNormal( true ), FrameWidth( 1920 ), FrameHeight( 1080 ),
    ActiveLightIndex( 0 ), PassNum( 2 ), ClickedPoint( -1, -1 ), Texter( std::make_unique<TextGL>() ),
    MainCamera( std::make_unique<CameraGL>() ), TextCamera( std::make_unique<CameraGL>() ),
    TextShader( std::make_unique<ShaderGL>() ), AmbientOcclusionShader( std::make_unique<ShaderGL>() ),
@@ -126,6 +126,12 @@ void RendererGL::keyboard(GLFWwindow* window, int key, int scancode, int action,
          Renderer->NeedUpdate = true;
          if (Renderer->PassNum < 1) Renderer->PassNum = 1;
          std::cout << "Pass Num: " << Renderer->PassNum << std::endl;
+         break;
+      case GLFW_KEY_B:
+         Renderer->UseBentNormal = !Renderer->UseBentNormal;
+         Renderer->NeedUpdate = true;
+         if (Renderer->UseBentNormal) std::cout << "Bent Normal Used\n";
+         else std::cout << "Original Normal Used\n";
          break;
       case GLFW_KEY_C:
          Renderer->writeFrame( "../result.png" );
@@ -256,7 +262,8 @@ void RendererGL::drawScene() const
    glBindFramebuffer( GL_FRAMEBUFFER, 0 );
    glUseProgram( SceneShader->getShaderProgram() );
    Lights->transferUniformsToShader( SceneShader.get() );
-   glUniform1i( SceneShader->getLocation( "LightIndex" ), ActiveLightIndex );
+   SceneShader->uniform1i( "UseBentNormal", UseBentNormal ? 1 : 0 );
+   SceneShader->uniform1i( "LightIndex", ActiveLightIndex );
    drawBunnyObject( SceneShader.get(), MainCamera.get() );
 }
 

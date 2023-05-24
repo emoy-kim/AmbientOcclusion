@@ -32,6 +32,7 @@ private:
    GLFWwindow* Window;
    bool Pause;
    bool NeedUpdate;
+   bool UseBentNormal;
    int FrameWidth;
    int FrameHeight;
    int ActiveLightIndex;

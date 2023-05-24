@@ -160,6 +160,7 @@ void ShaderGL::setSceneUniformLocations(int light_num)
       Location.Lights[i].LightAttenuationFactors = glGetUniformLocation( ShaderProgram, std::string("Lights[" + std::to_string( i ) + "].AttenuationFactors").c_str() );
    }
 
+   addUniformLocation( "UseBentNormal" );
    addUniformLocation( "LightIndex" );
 }
 
