@@ -35,6 +35,7 @@ private:
    int FrameWidth;
    int FrameHeight;
    int ActiveLightIndex;
+   int PassNum;
    glm::ivec2 ClickedPoint;
    std::unique_ptr<TextGL> Texter;
    std::unique_ptr<CameraGL> MainCamera;

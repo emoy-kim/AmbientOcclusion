@@ -2,7 +2,7 @@
 
 RendererGL::RendererGL() :
    Window( nullptr ), Pause( false ), NeedUpdate( true ), FrameWidth( 1920 ), FrameHeight( 1080 ),
-   ActiveLightIndex( 0 ), ClickedPoint( -1, -1 ), Texter( std::make_unique<TextGL>() ),
+   ActiveLightIndex( 0 ), PassNum( 2 ), ClickedPoint( -1, -1 ), Texter( std::make_unique<TextGL>() ),
    MainCamera( std::make_unique<CameraGL>() ), TextCamera( std::make_unique<CameraGL>() ),
    TextShader( std::make_unique<ShaderGL>() ), AmbientOcclusionShader( std::make_unique<ShaderGL>() ),
    SceneShader( std::make_unique<ShaderGL>() ), BunnyObject( std::make_unique<SurfaceElement>() ),
@@ -116,6 +116,17 @@ void RendererGL::keyboard(GLFWwindow* window, int key, int scancode, int action,
    if (action != GLFW_PRESS) return;
 
    switch (key) {
+      case GLFW_KEY_UP:
+         Renderer->PassNum++;
+         Renderer->NeedUpdate = true;
+         std::cout << "Pass Num: " << Renderer->PassNum << std::endl;
+         break;
+      case GLFW_KEY_DOWN:
+         Renderer->PassNum--;
+         Renderer->NeedUpdate = true;
+         if (Renderer->PassNum < 1) Renderer->PassNum = 1;
+         std::cout << "Pass Num: " << Renderer->PassNum << std::endl;
+         break;
       case GLFW_KEY_C:
          Renderer->writeFrame( "../result.png" );
          break;
@@ -298,7 +309,7 @@ void RendererGL::render()
    std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
 
    if (NeedUpdate) {
-      calculateAmbientOcclusion( 2 );
+      calculateAmbientOcclusion( PassNum );
       NeedUpdate = false;
    }
    drawScene();
