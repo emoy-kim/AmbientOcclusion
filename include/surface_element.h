@@ -49,9 +49,9 @@ private:
 
    struct ElementForShader
    {
-      alignas(16) int NextIndex;
-      alignas(16) int ChildIndex;
-      alignas(16) float AreaOverPi;
+      alignas(4) int NextIndex;
+      alignas(4) int ChildIndex;
+      alignas(4) float AreaOverPi;
       alignas(16) glm::vec3 Position;
       alignas(16) glm::vec3 Normal;
 
