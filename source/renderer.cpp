@@ -224,19 +224,17 @@ void RendererGL::calculateAmbientOcclusion(int pass_num)
 {
    const int n = BunnyObject->getVertexBufferSize();
    const auto m = static_cast<int>(std::ceil( std::sqrt( static_cast<float>(n) ) ));
+   const int g = getGroupSize( m );
    glUseProgram( AmbientOcclusionShader->getShaderProgram() );
-   AmbientOcclusionShader->uniform1i( "Phase", 1 );
    AmbientOcclusionShader->uniform1i( "Side", m );
    AmbientOcclusionShader->uniform1i( "VertexBufferSize", n );
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, BunnyObject->getReceiversBuffer() );
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 1, BunnyObject->getSurfaceElementsBuffer() );
-   glDispatchCompute( getGroupSize( m ), getGroupSize( m ), 1 );
-   glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
-
-   //AmbientOcclusionShader->uniform1i( "Phase", 2 );
-   //glDispatchCompute( m, m, 1 );
-   //glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
-
+   for (int i = 1; i <= pass_num; ++i) {
+      AmbientOcclusionShader->uniform1i( "Phase", i );
+      glDispatchCompute( g, g, 1 );
+      glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
+   }
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, 0 );
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 1, 0 );
 }
