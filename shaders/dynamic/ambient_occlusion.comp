@@ -80,7 +80,12 @@ void main()
       }
       v *= inversesqrt( squared_distance );
       float shadow = getShadowApproximation( v, squared_distance, receiver_normal, emitter_normal, emitter_area );
+
+      // modulate by last result, but not sure whether it is from the emitter or the receiver.
+      // seems that the code source says it is from the receiver.
+      // https://download.nvidia.com/developer/GPU_Gems_2/GPU_Gems2_ch14.pdf (Listing 14-1)
       if (Phase > 1) shadow *= receivers[index].Accessibility;
+
       total_shadow += shadow;
       bent_normal -= shadow * v;
       emitter_index = surface_elements[emitter_index].NextIndex;

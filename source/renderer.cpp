@@ -63,10 +63,10 @@ void RendererGL::initialize()
       std::string(shader_directory_path + "/text.frag").c_str()
    );
    DynamicAmbientOcclusionShader->setComputeShaders(
-      std::string(shader_directory_path + "/dynamic_ambient_occlusion.comp").c_str()
+      std::string(shader_directory_path + "/dynamic/ambient_occlusion.comp").c_str()
    );
    HighQualityAmbientOcclusionShader->setComputeShaders(
-      std::string(shader_directory_path + "/high_quality_ambient_occlusion.comp").c_str()
+      std::string(shader_directory_path + "/high-quality/ambient_occlusion.comp").c_str()
    );
    SceneShader->setShader(
       std::string(shader_directory_path + "/scene_shader.vert").c_str(),
