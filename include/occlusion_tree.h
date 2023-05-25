@@ -8,7 +8,7 @@ public:
    OcclusionTree();
    ~OcclusionTree() override = default;
 
-   void buildOcclusionTree(const std::string& obj_file_path);
+   void createOcclusionTree(const std::string& obj_file_path);
    void setBuffer();
 
 private:
@@ -44,6 +44,10 @@ private:
          Area( area ), Index( -1 ), Height( -1 ), Position( position ), Normal( normal ), Separator( separator ) {}
    };
 
-
+   [[nodiscard]] bool readObjectFile(
+      std::vector<glm::vec3>& vertices,
+      std::vector<glm::vec3>& normals,
+      const std::string& file_path
+   );
 
 };

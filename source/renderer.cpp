@@ -228,7 +228,9 @@ void RendererGL::setBunnyObjects() const
    BunnyObjectFromSurfaceElement->setDiffuseReflectionColor( { 1.0f, 1.0f, 1.0f, 1.0f } );
    BunnyObjectFromSurfaceElement->setBuffer();
 
-   //BunnyObjectFromOcclusionTree
+   BunnyObjectFromOcclusionTree->createOcclusionTree( std::string( sample_directory_path + "/Bunny/bunny.obj") );
+   BunnyObjectFromOcclusionTree->setDiffuseReflectionColor( { 1.0f, 1.0f, 1.0f, 1.0f } );
+
 }
 
 void RendererGL::drawBunnyObject(ObjectGL* bunny) const
