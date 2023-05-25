@@ -65,6 +65,7 @@ void main()
 
    int emitter_index = 0;
    float total_shadow = zero;
+   float previous_accessibility = receivers[index].Accessibility;
    vec3 receiver_position = vec3(receivers[index].Px, receivers[index].Py, receivers[index].Pz);
    vec3 receiver_normal = vec3(receivers[index].Nx, receivers[index].Ny, receivers[index].Nz);
    vec3 bent_normal = receiver_normal;
@@ -84,7 +85,7 @@ void main()
       // modulate by last result, but not sure whether it is from the emitter or the receiver.
       // seems that the code source says it is from the receiver.
       // https://download.nvidia.com/developer/GPU_Gems_2/GPU_Gems2_ch14.pdf (Listing 14-1)
-      if (Phase > 1) shadow *= receivers[index].Accessibility;
+      if (Phase > 1) shadow *= previous_accessibility;
 
       total_shadow += shadow;
       bent_normal -= shadow * v;
