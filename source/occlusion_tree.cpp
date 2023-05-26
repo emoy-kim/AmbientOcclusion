@@ -1,7 +1,6 @@
 #include "occlusion_tree.h"
 
-OcclusionTree::OcclusionTree() :
-   ObjectGL(), RootIndex( NullIndex ), DisksBuffer( 0 )
+OcclusionTree::OcclusionTree() : ObjectGL(), RootIndex( NullIndex ), DisksBuffer( 0 )
 {
 }
 

@@ -18,7 +18,6 @@ private:
    struct Disk
    {
       alignas(4) float Area;
-      alignas(4) float Occlusion;
       alignas(4) uint ParentIndex;
       alignas(4) uint NextIndex;
       alignas(4) uint LeftChildIndex;
@@ -27,11 +26,11 @@ private:
       alignas(16) glm::vec3 Normal;
 
       Disk() :
-         Area( 0.0f ), Occlusion( 1.0f ), ParentIndex( NullIndex ), NextIndex( NullIndex ), LeftChildIndex( NullIndex ),
+         Area( 0.0f ), ParentIndex( NullIndex ), NextIndex( NullIndex ), LeftChildIndex( NullIndex ),
          RightChildIndex( NullIndex ), Centroid( 0.0f ), Normal( 0.0f ) {}
       explicit Disk(uint parent_index) :
-         Area( 0.0f ), Occlusion( 1.0f ), ParentIndex( parent_index ), NextIndex( NullIndex ),
-         LeftChildIndex( NullIndex ), RightChildIndex( NullIndex ), Centroid( 0.0f ), Normal( 0.0f ) {}
+         Area( 0.0f ), ParentIndex( parent_index ), NextIndex( NullIndex ), LeftChildIndex( NullIndex ),
+         RightChildIndex( NullIndex ), Centroid( 0.0f ), Normal( 0.0f ) {}
    };
 
    uint RootIndex;

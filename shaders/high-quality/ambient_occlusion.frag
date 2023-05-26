@@ -25,6 +25,21 @@ struct MateralInfo {
 };
 uniform MateralInfo Material;
 
+struct Disk
+{
+   float Area;
+   uint ParentIndex;
+   uint NextIndex;
+   uint LeftChildIndex;
+   uint RightChildIndex;
+   vec3 Centroid;
+   vec3 Normal;
+};
+layout (binding = 0, std430) buffer Disks { Disk disks[]; };
+
+layout (binding = 0) uniform sampler2D ResultTexture;
+
+uniform int UseBentNormal;
 uniform int UseLight;
 uniform int LightIndex;
 uniform int LightNum;
@@ -36,7 +51,6 @@ uniform mat4 ProjectionMatrix;
 
 in vec3 position_in_ec;
 in vec3 normal_in_ec;
-in float accessibility;
 
 layout (location = 0) out vec4 final_color;
 

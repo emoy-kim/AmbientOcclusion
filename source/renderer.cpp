@@ -13,6 +13,14 @@ RendererGL::RendererGL() :
    printOpenGLInformation();
 }
 
+RendererGL::~RendererGL()
+{
+   if (HighQuality.ResultTextures[0] != 0) glDeleteTextures( 1, &HighQuality.ResultTextures[0] );
+   if (HighQuality.ResultTextures[1] != 0) glDeleteTextures( 1, &HighQuality.ResultTextures[1] );
+   if (HighQuality.Canvas[0] != 0) glDeleteFramebuffers( 1, &HighQuality.Canvas[0] );
+   if (HighQuality.Canvas[1] != 0) glDeleteFramebuffers( 1, &HighQuality.Canvas[1] );
+}
+
 void RendererGL::printOpenGLInformation()
 {
    std::cout << "****************************************************************\n";
@@ -228,7 +236,7 @@ void RendererGL::setDynamicAmbientOcclusionAlgorithm() const
    Dynamic.BunnyObject->setBuffer();
 }
 
-void RendererGL::setHighQualityAmbientOcclusionAlgorithm() const
+void RendererGL::setHighQualityAmbientOcclusionAlgorithm()
 {
    HighQuality.AmbientOcclusionShader->setHighQualityAmbientOcclusionUniformLocations( 1 );
 
@@ -237,6 +245,18 @@ void RendererGL::setHighQualityAmbientOcclusionAlgorithm() const
    HighQuality.BunnyObject->createOcclusionTree( obj_file_path );
    HighQuality.BunnyObject->setDiffuseReflectionColor( { 1.0f, 1.0f, 1.0f, 1.0f } );
    HighQuality.BunnyObject->setBuffer();
+
+   glCreateTextures( GL_TEXTURE_2D, 2, HighQuality.ResultTextures.data() );
+   glTextureStorage2D( HighQuality.ResultTextures[0], 1, GL_RGBA8, FrameWidth, FrameHeight );
+   glTextureStorage2D( HighQuality.ResultTextures[1], 1, GL_RGBA8, FrameWidth, FrameHeight );
+
+   constexpr std::array<GLuint, 4> clear_data = { 0, 0, 0, 255 };
+   glClearTexImage( HighQuality.ResultTextures[0], 0, GL_RGBA, GL_UNSIGNED_BYTE, clear_data.data() );
+   glClearTexImage( HighQuality.ResultTextures[1], 0, GL_RGBA, GL_UNSIGNED_BYTE, clear_data.data() );
+
+   glCreateFramebuffers( 2, HighQuality.Canvas.data() );
+   glNamedFramebufferTexture( HighQuality.Canvas[0], GL_COLOR_ATTACHMENT0, HighQuality.ResultTextures[0], 0 );
+   glNamedFramebufferTexture( HighQuality.Canvas[1], GL_COLOR_ATTACHMENT0, HighQuality.ResultTextures[1], 0 );
 }
 
 void RendererGL::calculateDynamicAmbientOcclusion(int pass_num) const
@@ -278,7 +298,7 @@ void RendererGL::drawSceneWithDynamicAmbientOcclusion() const
    glDrawElements( object->getDrawMode(), object->getIndexNum(), GL_UNSIGNED_INT, nullptr );
 }
 
-void RendererGL::calculateHighQualityAmbientOcclusion(int pass_num) const
+void RendererGL::calculateHighQualityAmbientOcclusion(int pass_num)
 {
    const OcclusionTree* object = HighQuality.BunnyObject.get();
    const ShaderGL* shader = HighQuality.AmbientOcclusionShader.get();
@@ -289,13 +309,19 @@ void RendererGL::calculateHighQualityAmbientOcclusion(int pass_num) const
    shader->uniform1i( "LightIndex", ActiveLightIndex );
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, object->getDisksBuffer() );
    for (int i = 0; i < pass_num - 1; ++i) {
-
+      glBindFramebuffer( GL_FRAMEBUFFER, HighQuality.Canvas[HighQuality.TargetCanvas] );
+      glBindTextureUnit( 0, HighQuality.getResultTexture() );
       glBindVertexArray( object->getVAO() );
       glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, object->getIBO() );
       glDrawElements( object->getDrawMode(), object->getIndexNum(), GL_UNSIGNED_INT, nullptr );
+      HighQuality.swapCanvas();
    }
-   glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 
+   glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+   glBindTextureUnit( 0, HighQuality.getResultTexture() );
+   glBindVertexArray( object->getVAO() );
+   glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, object->getIBO() );
+   glDrawElements( object->getDrawMode(), object->getIndexNum(), GL_UNSIGNED_INT, nullptr );
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, 0 );
 }
 
