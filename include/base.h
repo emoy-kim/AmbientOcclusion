@@ -21,6 +21,7 @@
 #include <queue>
 #include <list>
 #include <forward_list>
+#include <numeric>
 #include <set>
 #include <map>
 #include <unordered_map>
