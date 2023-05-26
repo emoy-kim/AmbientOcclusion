@@ -39,6 +39,7 @@ layout (binding = 0, std430) buffer Disks { Disk disks[]; };
 
 layout (binding = 0) uniform sampler2D ResultTexture;
 
+uniform int LastPhase;
 uniform int UseBentNormal;
 uniform int UseLight;
 uniform int LightIndex;
@@ -84,7 +85,7 @@ float getSpotlightFactor(in vec3 normalized_light_vector, in int light_index)
    return factor >= cos( radians( cutoff_angle ) ) ? pow( factor, Lights[light_index].SpotlightExponent ) : zero;
 }
 
-vec4 calculateLightingEquation()
+vec4 calculateLightingEquation(in vec3 normal)
 {
    vec4 color = Material.EmissionColor + GlobalAmbient * Material.AmbientColor;
 
@@ -107,11 +108,11 @@ vec4 calculateLightingEquation()
 
    vec4 local_color = Lights[LightIndex].AmbientColor * Material.AmbientColor;
 
-   float diffuse_intensity = max( dot( normal_in_ec, light_vector ), zero );
+   float diffuse_intensity = max( dot( normal, light_vector ), zero );
    local_color += diffuse_intensity * Lights[LightIndex].DiffuseColor * Material.DiffuseColor;
 
    vec3 halfway_vector = normalize( light_vector - normalize( position_in_ec ) );
-   float specular_intensity = max( dot( normal_in_ec, halfway_vector ), zero );
+   float specular_intensity = max( dot( normal, halfway_vector ), zero );
    local_color += 
       pow( specular_intensity, Material.SpecularExponent ) * 
       Lights[LightIndex].SpecularColor * Material.SpecularColor;
@@ -122,10 +123,18 @@ vec4 calculateLightingEquation()
 
 void main()
 {
-   final_color = vec4(one);
+   vec4 previous_result = texelFetch( ResultTexture, ivec2(gl_FragCoord.xy), 0 );
+   if (bool(LastPhase)) {
+      final_color = vec4(one);
+      if (bool(UseLight)) {
+         vec3 normal = bool(UseBentNormal) ? previous_result.rgb : normal_in_ec;
+         final_color *= calculateLightingEquation( normal );
+      }
+      else final_color *= Material.DiffuseColor;
+      float accessibility = previous_result.a;
+      final_color *= accessibility;
+   }
+   else {
 
-   if (bool(UseLight)) final_color *= calculateLightingEquation();
-   else final_color *= Material.DiffuseColor;
-
-   final_color *= accessibility;
+   }
 }

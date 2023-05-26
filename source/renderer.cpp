@@ -75,8 +75,8 @@ void RendererGL::initialize()
       std::string(shader_directory_path + "/dynamic/scene_shader.frag").c_str()
    );
    HighQuality.AmbientOcclusionShader->setShader(
-      std::string(shader_directory_path + "/dynamic/ambient_occlusion.vert").c_str(),
-      std::string(shader_directory_path + "/dynamic/ambient_occlusion.frag").c_str()
+      std::string(shader_directory_path + "/high-quality/ambient_occlusion.vert").c_str(),
+      std::string(shader_directory_path + "/high-quality/ambient_occlusion.frag").c_str()
    );
 }
 
@@ -250,13 +250,15 @@ void RendererGL::setHighQualityAmbientOcclusionAlgorithm()
    glTextureStorage2D( HighQuality.ResultTextures[0], 1, GL_RGBA8, FrameWidth, FrameHeight );
    glTextureStorage2D( HighQuality.ResultTextures[1], 1, GL_RGBA8, FrameWidth, FrameHeight );
 
-   constexpr std::array<GLuint, 4> clear_data = { 0, 0, 0, 255 };
-   glClearTexImage( HighQuality.ResultTextures[0], 0, GL_RGBA, GL_UNSIGNED_BYTE, clear_data.data() );
-   glClearTexImage( HighQuality.ResultTextures[1], 0, GL_RGBA, GL_UNSIGNED_BYTE, clear_data.data() );
-
    glCreateFramebuffers( 2, HighQuality.Canvas.data() );
    glNamedFramebufferTexture( HighQuality.Canvas[0], GL_COLOR_ATTACHMENT0, HighQuality.ResultTextures[0], 0 );
    glNamedFramebufferTexture( HighQuality.Canvas[1], GL_COLOR_ATTACHMENT0, HighQuality.ResultTextures[1], 0 );
+   glCheckNamedFramebufferStatus( HighQuality.Canvas[0], GL_FRAMEBUFFER );
+   glCheckNamedFramebufferStatus( HighQuality.Canvas[1], GL_FRAMEBUFFER );
+
+   constexpr std::array<GLfloat, 4> clear_data = { 0.0f, 0.0f, 0.0f, 1.0f };
+   glClearNamedFramebufferfv( HighQuality.Canvas[0], GL_COLOR, 0, &clear_data[0] );
+   glClearNamedFramebufferfv( HighQuality.Canvas[1], GL_COLOR, 0, &clear_data[0] );
 }
 
 void RendererGL::calculateDynamicAmbientOcclusion(int pass_num) const
@@ -305,21 +307,24 @@ void RendererGL::calculateHighQualityAmbientOcclusion(int pass_num)
    glViewport( 0, 0, FrameWidth, FrameHeight );
    glUseProgram( shader->getShaderProgram() );
    Lights->transferUniformsToShader( shader );
+   shader->uniform1i( "LastPhase", 0 );
    shader->uniform1i( "UseBentNormal", UseBentNormal ? 1 : 0 );
    shader->uniform1i( "LightIndex", ActiveLightIndex );
+   shader->transferBasicTransformationUniforms( glm::mat4(1.0f), MainCamera.get() );
+   object->transferUniformsToShader( shader );
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, object->getDisksBuffer() );
+   glBindVertexArray( object->getVAO() );
    for (int i = 0; i < pass_num - 1; ++i) {
       glBindFramebuffer( GL_FRAMEBUFFER, HighQuality.Canvas[HighQuality.TargetCanvas] );
       glBindTextureUnit( 0, HighQuality.getResultTexture() );
-      glBindVertexArray( object->getVAO() );
       glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, object->getIBO() );
       glDrawElements( object->getDrawMode(), object->getIndexNum(), GL_UNSIGNED_INT, nullptr );
       HighQuality.swapCanvas();
    }
 
    glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+   shader->uniform1i( "LastPhase", 1 );
    glBindTextureUnit( 0, HighQuality.getResultTexture() );
-   glBindVertexArray( object->getVAO() );
    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, object->getIBO() );
    glDrawElements( object->getDrawMode(), object->getIndexNum(), GL_UNSIGNED_INT, nullptr );
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, 0 );

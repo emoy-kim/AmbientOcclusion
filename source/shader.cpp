@@ -174,6 +174,8 @@ void ShaderGL::setHighQualityAmbientOcclusionUniformLocations(int light_num)
    Location.MaterialSpecular = glGetUniformLocation( ShaderProgram, "Material.SpecularColor" );
    Location.MaterialSpecularExponent = glGetUniformLocation( ShaderProgram, "Material.SpecularExponent" );
 
+   Location.Texture[0] = glGetUniformLocation( ShaderProgram, "ResultTexture" );
+
    Location.UseLight = glGetUniformLocation( ShaderProgram, "UseLight" );
    Location.LightNum = glGetUniformLocation( ShaderProgram, "LightNum" );
    Location.GlobalAmbient = glGetUniformLocation( ShaderProgram, "GlobalAmbient" );
@@ -191,6 +193,7 @@ void ShaderGL::setHighQualityAmbientOcclusionUniformLocations(int light_num)
       Location.Lights[i].LightAttenuationFactors = glGetUniformLocation( ShaderProgram, std::string("Lights[" + std::to_string( i ) + "].AttenuationFactors").c_str() );
    }
 
+   addUniformLocation( "LastPhase" );
    addUniformLocation( "UseBentNormal" );
    addUniformLocation( "LightIndex" );
 }
