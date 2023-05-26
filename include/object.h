@@ -57,7 +57,7 @@ public:
    int addTexture(const std::string& texture_file_path, bool is_grayscale = false);
    void addTexture(int width, int height, bool is_grayscale = false);
    int addTexture(const uint8_t* image_buffer, int width, int height, bool is_grayscale = false);
-   void transferUniformsToShader(const ShaderGL* shader);
+   void transferUniformsToShader(const ShaderGL* shader) const;
    void updateDataBuffer(const std::vector<glm::vec3>& vertices, const std::vector<glm::vec3>& normals);
    void updateDataBuffer(
       const std::vector<glm::vec3>& vertices,

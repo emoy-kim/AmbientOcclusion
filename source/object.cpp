@@ -470,7 +470,7 @@ void ObjectGL::setSquareObject(
    setObject( draw_mode, square_vertices, square_normals, square_textures, texture_file_path, is_grayscale );
 }
 
-void ObjectGL::transferUniformsToShader(const ShaderGL* shader)
+void ObjectGL::transferUniformsToShader(const ShaderGL* shader) const
 {
    glUniform4fv( shader->getMaterialEmissionLocation(), 1, &EmissionColor[0] );
    glUniform4fv( shader->getMaterialAmbientLocation(), 1, &AmbientReflectionColor[0] );

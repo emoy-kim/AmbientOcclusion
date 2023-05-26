@@ -133,11 +133,38 @@ void ShaderGL::setDynamicAmbientOcclusionUniformLocations()
    addUniformLocation( "VertexBufferSize" );
 }
 
-void ShaderGL::setHighQualityAmbientOcclusionUniformLocations()
+void ShaderGL::setDynamicSceneUniformLocations(int light_num)
 {
+   setBasicTransformationUniforms();
+
+   Location.MaterialEmission = glGetUniformLocation( ShaderProgram, "Material.EmissionColor" );
+   Location.MaterialAmbient = glGetUniformLocation( ShaderProgram, "Material.AmbientColor" );
+   Location.MaterialDiffuse = glGetUniformLocation( ShaderProgram, "Material.DiffuseColor" );
+   Location.MaterialSpecular = glGetUniformLocation( ShaderProgram, "Material.SpecularColor" );
+   Location.MaterialSpecularExponent = glGetUniformLocation( ShaderProgram, "Material.SpecularExponent" );
+
+   Location.UseLight = glGetUniformLocation( ShaderProgram, "UseLight" );
+   Location.LightNum = glGetUniformLocation( ShaderProgram, "LightNum" );
+   Location.GlobalAmbient = glGetUniformLocation( ShaderProgram, "GlobalAmbient" );
+
+   Location.Lights.resize( light_num );
+   for (int i = 0; i < light_num; ++i) {
+      Location.Lights[i].LightSwitch = glGetUniformLocation( ShaderProgram, std::string("Lights[" + std::to_string( i ) + "].LightSwitch").c_str() );
+      Location.Lights[i].LightPosition = glGetUniformLocation( ShaderProgram, std::string("Lights[" + std::to_string( i ) + "].Position").c_str() );
+      Location.Lights[i].LightAmbient = glGetUniformLocation( ShaderProgram, std::string("Lights[" + std::to_string( i ) + "].AmbientColor").c_str() );
+      Location.Lights[i].LightDiffuse = glGetUniformLocation( ShaderProgram, std::string("Lights[" + std::to_string( i ) + "].DiffuseColor").c_str() );
+      Location.Lights[i].LightSpecular = glGetUniformLocation( ShaderProgram, std::string("Lights[" + std::to_string( i ) + "].SpecularColor").c_str() );
+      Location.Lights[i].SpotlightDirection = glGetUniformLocation( ShaderProgram, std::string("Lights[" + std::to_string( i ) + "].SpotlightDirection").c_str() );
+      Location.Lights[i].SpotlightExponent = glGetUniformLocation( ShaderProgram, std::string("Lights[" + std::to_string( i ) + "].SpotlightExponent").c_str() );
+      Location.Lights[i].SpotlightCutoffAngle = glGetUniformLocation( ShaderProgram, std::string("Lights[" + std::to_string( i ) + "].SpotlightCutoffAngle").c_str() );
+      Location.Lights[i].LightAttenuationFactors = glGetUniformLocation( ShaderProgram, std::string("Lights[" + std::to_string( i ) + "].AttenuationFactors").c_str() );
+   }
+
+   addUniformLocation( "UseBentNormal" );
+   addUniformLocation( "LightIndex" );
 }
 
-void ShaderGL::setSceneUniformLocations(int light_num)
+void ShaderGL::setHighQualityAmbientOcclusionUniformLocations(int light_num)
 {
    setBasicTransformationUniforms();
 

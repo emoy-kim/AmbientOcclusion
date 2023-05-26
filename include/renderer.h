@@ -31,10 +31,29 @@ public:
 private:
    enum class ALGORITHM_TO_COMPARE { DYNAMIC = 0, HIGH_QUALITY };
 
+   struct DynamicAmbientOcclusion
+   {
+      std::unique_ptr<ShaderGL> AmbientOcclusionShader;
+      std::unique_ptr<ShaderGL> SceneShader;
+      std::unique_ptr<SurfaceElement> BunnyObject;
+
+      DynamicAmbientOcclusion() :
+         AmbientOcclusionShader( std::make_unique<ShaderGL>() ), SceneShader( std::make_unique<ShaderGL>() ),
+         BunnyObject( std::make_unique<SurfaceElement>() ) {}
+   };
+
+   struct HighQualityAmbientOcclusion
+   {
+      std::unique_ptr<ShaderGL> AmbientOcclusionShader;
+      std::unique_ptr<OcclusionTree> BunnyObject;
+
+      HighQualityAmbientOcclusion() :
+         AmbientOcclusionShader( std::make_unique<ShaderGL>() ), BunnyObject( std::make_unique<OcclusionTree>() ) {}
+   };
+
    inline static RendererGL* Renderer = nullptr;
    GLFWwindow* Window;
    bool Pause;
-   bool NeedUpdate;
    bool UseBentNormal;
    int FrameWidth;
    int FrameHeight;
@@ -45,12 +64,9 @@ private:
    std::unique_ptr<CameraGL> MainCamera;
    std::unique_ptr<CameraGL> TextCamera;
    std::unique_ptr<ShaderGL> TextShader;
-   std::unique_ptr<ShaderGL> DynamicAmbientOcclusionShader;
-   std::unique_ptr<ShaderGL> HighQualityAmbientOcclusionShader;
-   std::unique_ptr<ShaderGL> SceneShader;
-   std::unique_ptr<SurfaceElement> BunnyObjectFromSurfaceElement;
-   std::unique_ptr<OcclusionTree> BunnyObjectFromOcclusionTree;
    std::unique_ptr<LightGL> Lights;
+   DynamicAmbientOcclusion Dynamic;
+   HighQualityAmbientOcclusion HighQuality;
    ALGORITHM_TO_COMPARE AlgorithmToCompare;
 
    // 16 and 32 do well, anything in between or below is bad.
@@ -76,11 +92,9 @@ private:
 
    void setLights() const;
    void setBunnyObjects() const;
-
-   void drawBunnyObject(ObjectGL* bunny) const;
-   void drawScene(ObjectGL* object) const;
-   void drawText(const std::string& text, glm::vec2 start_position) const;
    void calculateDynamicAmbientOcclusion(int pass_num);
-   void calculateHighQualityAmbientOcclusion();
+   void drawSceneWithDynamicAmbientOcclusion() const;
+   void calculateHighQualityAmbientOcclusion(int pass_num);
+   void drawText(const std::string& text, glm::vec2 start_position) const;
    void render();
 };
