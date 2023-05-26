@@ -122,8 +122,8 @@ void OcclusionTree::setParentDisk(Disk& parent_disk)
    const Disk& right_disk = Disks[parent_disk.RightChildIndex];
    parent_disk.Area = left_disk.Area + right_disk.Area;
    const float weight = right_disk.Area / parent_disk.Area;
-   parent_disk.Normal = glm::normalize( glm::mix( left_disk.Normal, right_disk.Normal, weight ) );
    parent_disk.Centroid = glm::mix( left_disk.Centroid, right_disk.Centroid, weight );
+   parent_disk.Normal = glm::normalize( glm::mix( left_disk.Normal, right_disk.Normal, weight ) );
    if (std::isnan( parent_disk.Centroid.x )) parent_disk.Centroid = (left_disk.Centroid + right_disk.Centroid) * 0.5f;
    if (std::isnan( parent_disk.Normal.x )) parent_disk.Normal = glm::normalize( parent_disk.Centroid );
 }
@@ -161,15 +161,15 @@ uint OcclusionTree::build(
       {
          const uint i = 3 * a;
          const uint j = 3 * b;
-         const float centroid_a =
+         const float triple_centroid_a =
             Vertices[IndexBuffer[i]][dominant_axis] +
             Vertices[IndexBuffer[i + 1]][dominant_axis] +
             Vertices[IndexBuffer[i + 2]][dominant_axis];
-         const float centroid_b =
+         const float triple_centroid_b =
             Vertices[IndexBuffer[j]][dominant_axis] +
             Vertices[IndexBuffer[j + 1]][dominant_axis] +
             Vertices[IndexBuffer[j + 2]][dominant_axis];
-         return centroid_a < centroid_b;
+         return triple_centroid_a < triple_centroid_b;
       }
    );
    const auto mid = begin + (end - begin) / 2;
@@ -177,16 +177,24 @@ uint OcclusionTree::build(
    assert( begin <= mid && mid <= end && begin <= end );
 
    const auto location = static_cast<uint>(Disks.size());
-   Disk new_disk = Disks.emplace_back(
-      parent_index,
-      build( location, begin, mid ),
-      build( location, mid, end )
-   );
+   Disk& new_disk = Disks.emplace_back( parent_index );
+   new_disk.LeftChildIndex = build( location, begin, mid );
+   new_disk.RightChildIndex = build( location, mid, end );
 
    assert( new_disk.LeftChildIndex != NullIndex && new_disk.RightChildIndex != NullIndex );
 
    setParentDisk( new_disk );
    return location;
+}
+
+uint OcclusionTree::getNextIndex(uint index)
+{
+   if (index == RootIndex) return NullIndex;
+   else {
+      const Disk& disk = Disks[index];
+      const Disk& parent_disk = Disks[disk.ParentIndex];
+      return parent_disk.LeftChildIndex == index ? parent_disk.RightChildIndex : getNextIndex( disk.ParentIndex );
+   }
 }
 
 void OcclusionTree::createOcclusionTree(const std::string& obj_file_path)
@@ -220,5 +228,7 @@ void OcclusionTree::createOcclusionTree(const std::string& obj_file_path)
    std::iota( indexer.begin(), indexer.end(), 0 );
    RootIndex = build( NullIndex, indexer.begin(), indexer.end() );
 
-
+   for (uint i = 0; i < static_cast<uint>(Disks.size()); ++i) {
+      Disks[i].NextIndex = getNextIndex( i );
+   }
 }

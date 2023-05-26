@@ -224,11 +224,12 @@ void RendererGL::setLights() const
 void RendererGL::setBunnyObjects() const
 {
    const std::string sample_directory_path = std::string(CMAKE_SOURCE_DIR) + "/samples";
-   BunnyObjectFromSurfaceElement->createSurfaceElements( std::string( sample_directory_path + "/Bunny/bunny.obj") );
+   const std::string obj_file_path = std::string( sample_directory_path + "/Bunny/bunny.obj");
+   BunnyObjectFromSurfaceElement->createSurfaceElements( obj_file_path );
    BunnyObjectFromSurfaceElement->setDiffuseReflectionColor( { 1.0f, 1.0f, 1.0f, 1.0f } );
    BunnyObjectFromSurfaceElement->setBuffer();
 
-   BunnyObjectFromOcclusionTree->createOcclusionTree( std::string( sample_directory_path + "/Bunny/bunny.obj") );
+   BunnyObjectFromOcclusionTree->createOcclusionTree( obj_file_path );
    BunnyObjectFromOcclusionTree->setDiffuseReflectionColor( { 1.0f, 1.0f, 1.0f, 1.0f } );
 
 }

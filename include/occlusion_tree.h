@@ -28,9 +28,9 @@ private:
       Disk() :
          Area( 0.0f ), Occlusion( 1.0f ), Centroid( 0.0f ), Normal( 0.0f ), ParentIndex( NullIndex ),
          NextIndex( NullIndex ), LeftChildIndex( NullIndex ), RightChildIndex( NullIndex ) {}
-      Disk(uint parent_index, uint left_child_index, uint right_child_index) :
+      explicit Disk(uint parent_index) :
          Area( 0.0f ), Occlusion( 1.0f ), Centroid( 0.0f ), Normal( 0.0f ), ParentIndex( parent_index ),
-         NextIndex( NullIndex ), LeftChildIndex( left_child_index ), RightChildIndex( right_child_index ) {}
+         NextIndex( NullIndex ), LeftChildIndex( NullIndex ), RightChildIndex( NullIndex ) {}
    };
 
    uint RootIndex;
@@ -51,5 +51,5 @@ private:
       const std::vector<uint>::iterator& begin,
       const std::vector<uint>::iterator& end
    );
-
+   [[nodiscard]] uint getNextIndex(uint index);
 };
