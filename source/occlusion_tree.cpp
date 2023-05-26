@@ -1,7 +1,7 @@
 #include "occlusion_tree.h"
 
 OcclusionTree::OcclusionTree() :
-   ObjectGL(), RootIndex( NullIndex )
+   ObjectGL(), RootIndex( NullIndex ), DisksBuffer( 0 )
 {
 }
 
@@ -231,4 +231,12 @@ void OcclusionTree::createOcclusionTree(const std::string& obj_file_path)
    for (uint i = 0; i < static_cast<uint>(Disks.size()); ++i) {
       Disks[i].NextIndex = getNextIndex( i );
    }
+}
+
+void OcclusionTree::setBuffer()
+{
+   const auto size = static_cast<int>(Disks.size());
+   addCustomBufferObject<Disk>( "disks", size );
+   DisksBuffer = getCustomBufferID( "disks" );
+   glNamedBufferSubData( DisksBuffer, 0, static_cast<GLsizei>(size * sizeof( Disk )), Disks.data() );
 }

@@ -216,17 +216,27 @@ void RendererGL::setLights() const
    Lights->addLight( light_position, ambient_color, diffuse_color, specular_color );
 }
 
-void RendererGL::setBunnyObjects() const
+void RendererGL::setDynamicAmbientOcclusionAlgorithm() const
 {
+   Dynamic.SceneShader->setDynamicSceneUniformLocations( 1 );
+   Dynamic.AmbientOcclusionShader->setDynamicAmbientOcclusionUniformLocations();
+
    const std::string sample_directory_path = std::string(CMAKE_SOURCE_DIR) + "/samples";
    const std::string obj_file_path = std::string( sample_directory_path + "/Bunny/bunny.obj");
    Dynamic.BunnyObject->createSurfaceElements( obj_file_path );
    Dynamic.BunnyObject->setDiffuseReflectionColor( { 1.0f, 1.0f, 1.0f, 1.0f } );
    Dynamic.BunnyObject->setBuffer();
+}
 
+void RendererGL::setHighQualityAmbientOcclusionAlgorithm() const
+{
+   HighQuality.AmbientOcclusionShader->setHighQualityAmbientOcclusionUniformLocations( 1 );
+
+   const std::string sample_directory_path = std::string(CMAKE_SOURCE_DIR) + "/samples";
+   const std::string obj_file_path = std::string( sample_directory_path + "/Bunny/bunny.obj");
    HighQuality.BunnyObject->createOcclusionTree( obj_file_path );
    HighQuality.BunnyObject->setDiffuseReflectionColor( { 1.0f, 1.0f, 1.0f, 1.0f } );
-
+   HighQuality.BunnyObject->setBuffer();
 }
 
 void RendererGL::calculateDynamicAmbientOcclusion(int pass_num) const
@@ -262,7 +272,7 @@ void RendererGL::drawSceneWithDynamicAmbientOcclusion() const
 
    const ObjectGL* object = Dynamic.BunnyObject.get();
    shader->transferBasicTransformationUniforms( glm::mat4(1.0f), MainCamera.get() );
-   object->transferUniformsToShader( Dynamic.SceneShader.get() );
+   object->transferUniformsToShader( shader );
    glBindVertexArray( object->getVAO() );
    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, object->getIBO() );
    glDrawElements( object->getDrawMode(), object->getIndexNum(), GL_UNSIGNED_INT, nullptr );
@@ -272,9 +282,21 @@ void RendererGL::calculateHighQualityAmbientOcclusion(int pass_num) const
 {
    const OcclusionTree* object = HighQuality.BunnyObject.get();
    const ShaderGL* shader = HighQuality.AmbientOcclusionShader.get();
+   glViewport( 0, 0, FrameWidth, FrameHeight );
    glUseProgram( shader->getShaderProgram() );
+   Lights->transferUniformsToShader( shader );
+   shader->uniform1i( "UseBentNormal", UseBentNormal ? 1 : 0 );
+   shader->uniform1i( "LightIndex", ActiveLightIndex );
+   glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, object->getDisksBuffer() );
+   for (int i = 0; i < pass_num - 1; ++i) {
 
-   glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
+      glBindVertexArray( object->getVAO() );
+      glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, object->getIBO() );
+      glDrawElements( object->getDrawMode(), object->getIndexNum(), GL_UNSIGNED_INT, nullptr );
+   }
+   glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+
+   glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, 0 );
 }
 
 void RendererGL::drawText(const std::string& text, glm::vec2 start_position) const
@@ -346,12 +368,9 @@ void RendererGL::play()
    if (glfwWindowShouldClose( Window )) initialize();
 
    setLights();
-   setBunnyObjects();
-
+   setDynamicAmbientOcclusionAlgorithm();
+   setHighQualityAmbientOcclusionAlgorithm();
    TextShader->setTextUniformLocations();
-   Dynamic.SceneShader->setDynamicSceneUniformLocations( 1 );
-   Dynamic.AmbientOcclusionShader->setDynamicAmbientOcclusionUniformLocations();
-   HighQuality.AmbientOcclusionShader->setHighQualityAmbientOcclusionUniformLocations( 1 );
 
    while (!glfwWindowShouldClose( Window )) {
       if (!Pause) render();

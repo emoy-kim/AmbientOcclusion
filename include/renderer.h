@@ -88,7 +88,8 @@ private:
    static void mousewheel(GLFWwindow* window, double xoffset, double yoffset);
 
    void setLights() const;
-   void setBunnyObjects() const;
+   void setDynamicAmbientOcclusionAlgorithm() const;
+   void setHighQualityAmbientOcclusionAlgorithm() const;
    void calculateDynamicAmbientOcclusion(int pass_num) const;
    void drawSceneWithDynamicAmbientOcclusion() const;
    void calculateHighQualityAmbientOcclusion(int pass_num) const;

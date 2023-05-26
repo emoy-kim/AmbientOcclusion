@@ -8,6 +8,7 @@ public:
    OcclusionTree();
    ~OcclusionTree() override = default;
 
+   [[nodiscard]] GLuint getDisksBuffer() const { return DisksBuffer; }
    void createOcclusionTree(const std::string& obj_file_path);
    void setBuffer();
 
@@ -16,24 +17,25 @@ private:
 
    struct Disk
    {
-      float Area;
-      float Occlusion;
-      glm::vec3 Centroid;
-      glm::vec3 Normal;
-      uint ParentIndex;
-      uint NextIndex;
-      uint LeftChildIndex;
-      uint RightChildIndex;
+      alignas(4) float Area;
+      alignas(4) float Occlusion;
+      alignas(4) uint ParentIndex;
+      alignas(4) uint NextIndex;
+      alignas(4) uint LeftChildIndex;
+      alignas(4) uint RightChildIndex;
+      alignas(16) glm::vec3 Centroid;
+      alignas(16) glm::vec3 Normal;
 
       Disk() :
-         Area( 0.0f ), Occlusion( 1.0f ), Centroid( 0.0f ), Normal( 0.0f ), ParentIndex( NullIndex ),
-         NextIndex( NullIndex ), LeftChildIndex( NullIndex ), RightChildIndex( NullIndex ) {}
+         Area( 0.0f ), Occlusion( 1.0f ), ParentIndex( NullIndex ), NextIndex( NullIndex ), LeftChildIndex( NullIndex ),
+         RightChildIndex( NullIndex ), Centroid( 0.0f ), Normal( 0.0f ) {}
       explicit Disk(uint parent_index) :
-         Area( 0.0f ), Occlusion( 1.0f ), Centroid( 0.0f ), Normal( 0.0f ), ParentIndex( parent_index ),
-         NextIndex( NullIndex ), LeftChildIndex( NullIndex ), RightChildIndex( NullIndex ) {}
+         Area( 0.0f ), Occlusion( 1.0f ), ParentIndex( parent_index ), NextIndex( NullIndex ),
+         LeftChildIndex( NullIndex ), RightChildIndex( NullIndex ), Centroid( 0.0f ), Normal( 0.0f ) {}
    };
 
    uint RootIndex;
+   GLuint DisksBuffer;
    std::vector<Disk> Disks;
    std::vector<glm::vec3> Vertices;
 
