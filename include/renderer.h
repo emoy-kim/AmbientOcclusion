@@ -1,10 +1,7 @@
 /*
  * Author: Jeesun Kim
  * E-mail: emoy.kim_AT_gmail.com
- * 
- * This code is a free software; it can be freely used, changed and redistributed.
- * If you use any version of the code, please reference the code.
- * 
+ *
  */
 
 #pragma once
@@ -92,9 +89,9 @@ private:
 
    void setLights() const;
    void setBunnyObjects() const;
-   void calculateDynamicAmbientOcclusion(int pass_num);
+   void calculateDynamicAmbientOcclusion(int pass_num) const;
    void drawSceneWithDynamicAmbientOcclusion() const;
-   void calculateHighQualityAmbientOcclusion(int pass_num);
+   void calculateHighQualityAmbientOcclusion(int pass_num) const;
    void drawText(const std::string& text, glm::vec2 start_position) const;
    void render();
 };

@@ -229,7 +229,7 @@ void RendererGL::setBunnyObjects() const
 
 }
 
-void RendererGL::calculateDynamicAmbientOcclusion(int pass_num)
+void RendererGL::calculateDynamicAmbientOcclusion(int pass_num) const
 {
    const SurfaceElement* object = Dynamic.BunnyObject.get();
    const int n = object->getVertexBufferSize();
@@ -268,7 +268,7 @@ void RendererGL::drawSceneWithDynamicAmbientOcclusion() const
    glDrawElements( object->getDrawMode(), object->getIndexNum(), GL_UNSIGNED_INT, nullptr );
 }
 
-void RendererGL::calculateHighQualityAmbientOcclusion(int pass_num)
+void RendererGL::calculateHighQualityAmbientOcclusion(int pass_num) const
 {
    const OcclusionTree* object = HighQuality.BunnyObject.get();
    const ShaderGL* shader = HighQuality.AmbientOcclusionShader.get();
