@@ -1,15 +1,11 @@
 #include "occlusion_tree.h"
 
 OcclusionTree::OcclusionTree() :
-   ObjectGL()
+   ObjectGL(), RootIndex( NullIndex )
 {
 }
 
-bool OcclusionTree::readObjectFile(
-   std::vector<glm::vec3>& vertices,
-   std::vector<glm::vec3>& normals,
-   const std::string& file_path
-)
+bool OcclusionTree::readObjectFile(std::vector<glm::vec3>& normals, const std::string& file_path)
 {
    std::ifstream file(file_path);
    if (!file.is_open()) {
@@ -66,31 +62,163 @@ bool OcclusionTree::readObjectFile(
       normals[v2] += n;
    }
    for (auto& n : normals) n = glm::normalize( n );
-   vertices = std::move( vertex_buffer );
+   Vertices = std::move( vertex_buffer );
    IndexBuffer = std::move( vertex_indices );
    return true;
+}
+
+void OcclusionTree::getBoundary(
+   glm::vec3& min_point,
+   glm::vec3& max_point,
+   const std::vector<uint>::iterator& begin,
+   const std::vector<uint>::iterator& end
+)
+{
+   min_point = glm::vec3(std::numeric_limits<float>::max());
+   max_point = glm::vec3(std::numeric_limits<float>::lowest());
+   for (auto face_index = begin; face_index != end; ++face_index) {
+      const uint i = 3 * *face_index;
+      const glm::vec3 v0 = Vertices[IndexBuffer[i]];
+      const glm::vec3 v1 = Vertices[IndexBuffer[i + 1]];
+      const glm::vec3 v2 = Vertices[IndexBuffer[i + 2]];
+      const glm::vec3 centroid = (v0 + v1 + v2) / 3.0f;
+      if (centroid.x < min_point.x) min_point.x = centroid.x;
+      if (centroid.y < min_point.y) min_point.y = centroid.y;
+      if (centroid.z < min_point.z) min_point.z = centroid.z;
+
+      if (centroid.x > max_point.x) max_point.x = centroid.x;
+      if (centroid.y > max_point.y) max_point.y = centroid.y;
+      if (centroid.z > max_point.z) max_point.z = centroid.z;
+   }
+}
+
+int OcclusionTree::getDominantAxis(const glm::vec3& p0, const glm::vec3& p1)
+{
+   int axis;
+   float max_length = -1.0f;
+   float diff = p1.x - p0.x;
+   if (max_length < diff) {
+      max_length = diff;
+      axis = 0;
+   }
+
+   diff = p1.y - p0.y;
+   if (max_length < diff) {
+      max_length = diff;
+      axis = 1;
+   }
+
+   diff = p1.z - p0.z;
+   if (max_length < diff) {
+      max_length = diff;
+      axis = 2;
+   }
+   return axis;
+}
+
+void OcclusionTree::setParentDisk(Disk& parent_disk)
+{
+   const Disk& left_disk = Disks[parent_disk.LeftChildIndex];
+   const Disk& right_disk = Disks[parent_disk.RightChildIndex];
+   parent_disk.Area = left_disk.Area + right_disk.Area;
+   const float weight = right_disk.Area / parent_disk.Area;
+   parent_disk.Normal = glm::normalize( glm::mix( left_disk.Normal, right_disk.Normal, weight ) );
+   parent_disk.Centroid = glm::mix( left_disk.Centroid, right_disk.Centroid, weight );
+   if (std::isnan( parent_disk.Centroid.x )) parent_disk.Centroid = (left_disk.Centroid + right_disk.Centroid) * 0.5f;
+   if (std::isnan( parent_disk.Normal.x )) parent_disk.Normal = glm::normalize( parent_disk.Centroid );
+}
+
+uint OcclusionTree::build(
+   uint parent_index,
+   const std::vector<uint>::iterator& begin,
+   const std::vector<uint>::iterator& end
+)
+{
+   assert( begin <= end );
+
+   if (begin == end) return NullIndex;
+   else if (begin + 1 == end) {
+      Disk disk;
+      const uint i = 3 * *begin;
+      const glm::vec3 v0 = Vertices[IndexBuffer[i]];
+      const glm::vec3 v1 = Vertices[IndexBuffer[i + 1]];
+      const glm::vec3 v2 = Vertices[IndexBuffer[i + 2]];
+      const glm::vec3 n = glm::cross( v1 - v0, v2 - v0 );
+      disk.Normal = glm::normalize( n );
+      disk.Area = glm::length( n ) * 0.5f;
+      disk.Centroid = (v0 + v1 + v2) / 3.0f;
+      disk.ParentIndex = parent_index;
+      Disks[*begin] = disk;
+      return *begin;
+   }
+
+   glm::vec3 min_point, max_point;
+   getBoundary( min_point, max_point, begin, end );
+   const int dominant_axis = getDominantAxis( min_point, max_point );
+   std::sort(
+      begin, end,
+      [this, dominant_axis](uint a, uint b)
+      {
+         const uint i = 3 * a;
+         const uint j = 3 * b;
+         const float centroid_a =
+            Vertices[IndexBuffer[i]][dominant_axis] +
+            Vertices[IndexBuffer[i + 1]][dominant_axis] +
+            Vertices[IndexBuffer[i + 2]][dominant_axis];
+         const float centroid_b =
+            Vertices[IndexBuffer[j]][dominant_axis] +
+            Vertices[IndexBuffer[j + 1]][dominant_axis] +
+            Vertices[IndexBuffer[j + 2]][dominant_axis];
+         return centroid_a < centroid_b;
+      }
+   );
+   const auto mid = begin + (end - begin) / 2;
+
+   assert( begin <= mid && mid <= end && begin <= end );
+
+   const auto location = static_cast<uint>(Disks.size());
+   Disk new_disk = Disks.emplace_back(
+      parent_index,
+      build( location, begin, mid ),
+      build( location, mid, end )
+   );
+
+   assert( new_disk.LeftChildIndex != NullIndex && new_disk.RightChildIndex != NullIndex );
+
+   setParentDisk( new_disk );
+   return location;
 }
 
 void OcclusionTree::createOcclusionTree(const std::string& obj_file_path)
 {
    DrawMode = GL_TRIANGLES;
-   std::vector<glm::vec3> vertices, normals;
-   if (!readObjectFile( vertices, normals, obj_file_path )) return;
+   std::vector<glm::vec3> normals;
+   if (!readObjectFile( normals, obj_file_path )) return;
 
-   for (int i = 0; i < static_cast<int>(vertices.size()); ++i) {
-      DataBuffer.emplace_back( vertices[i].x );
-      DataBuffer.emplace_back( vertices[i].y );
-      DataBuffer.emplace_back( vertices[i].z );
+   for (int i = 0; i < static_cast<int>(Vertices.size()); ++i) {
+      DataBuffer.emplace_back( Vertices[i].x );
+      DataBuffer.emplace_back( Vertices[i].y );
+      DataBuffer.emplace_back( Vertices[i].z );
       DataBuffer.emplace_back( normals[i].x );
       DataBuffer.emplace_back( normals[i].y );
       DataBuffer.emplace_back( normals[i].z );
       VerticesCount++;
    }
-   vertices.clear();
    normals.clear();
 
    const auto n_bytes_per_vertex = static_cast<int>(6 * sizeof( GLfloat ));
    prepareVertexBuffer( n_bytes_per_vertex );
    prepareNormal();
    prepareIndexBuffer();
+
+   const size_t face_num = IndexBuffer.size() / 3;
+
+   Disks.clear();
+   Disks.resize( face_num );
+
+   std::vector<uint> indexer(face_num);
+   std::iota( indexer.begin(), indexer.end(), 0 );
+   RootIndex = build( NullIndex, indexer.begin(), indexer.end() );
+
+
 }
