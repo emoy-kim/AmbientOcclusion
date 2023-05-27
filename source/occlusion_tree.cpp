@@ -71,14 +71,14 @@ bool OcclusionTree::readObjectFile(std::vector<glm::vec3>& normals, const std::s
 void OcclusionTree::getBoundary(
    glm::vec3& min_point,
    glm::vec3& max_point,
-   const std::vector<uint>::iterator& begin,
-   const std::vector<uint>::iterator& end
+   const std::vector<int>::iterator& begin,
+   const std::vector<int>::iterator& end
 )
 {
    min_point = glm::vec3(std::numeric_limits<float>::max());
    max_point = glm::vec3(std::numeric_limits<float>::lowest());
    for (auto face_index = begin; face_index != end; ++face_index) {
-      const uint i = 3 * *face_index;
+      const int i = 3 * *face_index;
       const glm::vec3 v0 = Vertices[IndexBuffer[i]];
       const glm::vec3 v1 = Vertices[IndexBuffer[i + 1]];
       const glm::vec3 v2 = Vertices[IndexBuffer[i + 2]];
@@ -129,10 +129,10 @@ void OcclusionTree::setParentDisk(Disk& parent_disk)
    if (std::isnan( parent_disk.Normal.x )) parent_disk.Normal = glm::normalize( parent_disk.Centroid );
 }
 
-uint OcclusionTree::build(
-   uint parent_index,
-   const std::vector<uint>::iterator& begin,
-   const std::vector<uint>::iterator& end
+int OcclusionTree::build(
+   int parent_index,
+   const std::vector<int>::iterator& begin,
+   const std::vector<int>::iterator& end
 )
 {
    assert( begin <= end );
@@ -140,7 +140,7 @@ uint OcclusionTree::build(
    if (begin == end) return NullIndex;
    else if (begin + 1 == end) {
       Disk disk;
-      const uint i = 3 * *begin;
+      const int i = 3 * *begin;
       const glm::vec3 v0 = Vertices[IndexBuffer[i]];
       const glm::vec3 v1 = Vertices[IndexBuffer[i + 1]];
       const glm::vec3 v2 = Vertices[IndexBuffer[i + 2]];
@@ -158,10 +158,10 @@ uint OcclusionTree::build(
    const int dominant_axis = getDominantAxis( min_point, max_point );
    std::sort(
       begin, end,
-      [this, dominant_axis](uint a, uint b)
+      [this, dominant_axis](int a, int b)
       {
-         const uint i = 3 * a;
-         const uint j = 3 * b;
+         const int i = 3 * a;
+         const int j = 3 * b;
          const float triple_centroid_a =
             Vertices[IndexBuffer[i]][dominant_axis] +
             Vertices[IndexBuffer[i + 1]][dominant_axis] +
@@ -177,7 +177,7 @@ uint OcclusionTree::build(
 
    assert( begin <= mid && mid <= end && begin <= end );
 
-   const auto location = static_cast<uint>(Disks.size());
+   const auto location = static_cast<int>(Disks.size());
    Disk& new_disk = Disks.emplace_back( parent_index );
    new_disk.LeftChildIndex = build( location, begin, mid );
    new_disk.RightChildIndex = build( location, mid, end );
@@ -188,7 +188,7 @@ uint OcclusionTree::build(
    return location;
 }
 
-uint OcclusionTree::getNextIndex(uint index)
+int OcclusionTree::getNextIndex(int index)
 {
    if (index == RootIndex) return NullIndex;
    else {
@@ -225,11 +225,11 @@ void OcclusionTree::createOcclusionTree(const std::string& obj_file_path)
    Disks.clear();
    Disks.resize( face_num );
 
-   std::vector<uint> indexer(face_num);
+   std::vector<int> indexer(face_num);
    std::iota( indexer.begin(), indexer.end(), 0 );
    RootIndex = build( NullIndex, indexer.begin(), indexer.end() );
 
-   for (uint i = 0; i < static_cast<uint>(Disks.size()); ++i) {
+   for (int i = 0; i < static_cast<int>(Disks.size()); ++i) {
       Disks[i].NextIndex = getNextIndex( i );
    }
 }

@@ -9,7 +9,7 @@ public:
    ~OcclusionTree() override = default;
 
    [[nodiscard]] bool robust() const { return Robust; }
-   [[nodiscard]] uint getRootIndex() const { return RootIndex; }
+   [[nodiscard]] int getRootIndex() const { return RootIndex; }
    [[nodiscard]] GLuint getDisksBuffer() const { return DisksBuffer; }
    [[nodiscard]] float getProximityTolerance() const { return ProximityTolerance; }
    [[nodiscard]] float getDistanceAttenuation() const { return DistanceAttenuation; }
@@ -27,28 +27,28 @@ public:
    }
 
 private:
-   inline static uint NullIndex = std::numeric_limits<uint>::max();
+   inline static int NullIndex = -1;
 
    struct Disk
    {
       alignas(4) float AreaOverPi;
-      alignas(4) uint ParentIndex;
-      alignas(4) uint NextIndex;
-      alignas(4) uint LeftChildIndex;
-      alignas(4) uint RightChildIndex;
+      alignas(4) int ParentIndex;
+      alignas(4) int NextIndex;
+      alignas(4) int LeftChildIndex;
+      alignas(4) int RightChildIndex;
       alignas(16) glm::vec3 Centroid;
       alignas(16) glm::vec3 Normal;
 
       Disk() :
          AreaOverPi( 0.0f ), ParentIndex( NullIndex ), NextIndex( NullIndex ), LeftChildIndex( NullIndex ),
          RightChildIndex( NullIndex ), Centroid( 0.0f ), Normal( 0.0f ) {}
-      explicit Disk(uint parent_index) :
+      explicit Disk(int parent_index) :
          AreaOverPi( 0.0f ), ParentIndex( parent_index ), NextIndex( NullIndex ), LeftChildIndex( NullIndex ),
          RightChildIndex( NullIndex ), Centroid( 0.0f ), Normal( 0.0f ) {}
    };
 
    bool Robust;
-   uint RootIndex;
+   int RootIndex;
    GLuint DisksBuffer;
    float ProximityTolerance;
    float DistanceAttenuation;
@@ -60,15 +60,15 @@ private:
    void getBoundary(
       glm::vec3& min_point,
       glm::vec3& max_point,
-      const std::vector<uint>::iterator& begin,
-      const std::vector<uint>::iterator& end
+      const std::vector<int>::iterator& begin,
+      const std::vector<int>::iterator& end
    );
    [[nodiscard]] static int getDominantAxis(const glm::vec3& p0, const glm::vec3& p1);
    void setParentDisk(Disk& parent_disk);
-   [[nodiscard]] uint build(
-      uint parent_index,
-      const std::vector<uint>::iterator& begin,
-      const std::vector<uint>::iterator& end
+   [[nodiscard]] int build(
+      int parent_index,
+      const std::vector<int>::iterator& begin,
+      const std::vector<int>::iterator& end
    );
-   [[nodiscard]] uint getNextIndex(uint index);
+   [[nodiscard]] int getNextIndex(int index);
 };

@@ -337,7 +337,7 @@ void RendererGL::calculateHighQualityAmbientOcclusion(int pass_num)
    shader->uniform1i( "Robust", object->robust() ? 1 : 0 );
    shader->uniform1i( "LastPhase", 0 );
    shader->uniform1i( "UseBentNormal", UseBentNormal ? 1 : 0 );
-   shader->uniform1ui( "RootIndex", object->getRootIndex() );
+   shader->uniform1i( "RootIndex", object->getRootIndex() );
    shader->uniform1f( "ProximityTolerance", object->getProximityTolerance() );
    shader->uniform1f( "DistanceAttenuation", object->getDistanceAttenuation() );
    shader->uniform1i( "LightIndex", ActiveLightIndex );
