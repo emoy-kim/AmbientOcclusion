@@ -133,6 +133,13 @@ void RendererGL::keyboard(GLFWwindow* window, int key, int scancode, int action,
             else std::cout << "Original Normal Used\n";
          }
          break;
+      case GLFW_KEY_R:
+         if (!Renderer->Pause && Renderer->AlgorithmToCompare == ALGORITHM_TO_COMPARE::HIGH_QUALITY) {
+            Renderer->HighQuality.BunnyObject->toggleRobustSwitch();
+            if (Renderer->HighQuality.BunnyObject->robust()) std::cout << "High-Quality Processed\n";
+            else std::cout << "Low-Quality Processed\n";
+         }
+         break;
       case GLFW_KEY_E:
          if (!Renderer->Pause && Renderer->AlgorithmToCompare == ALGORITHM_TO_COMPARE::HIGH_QUALITY) {
             if (glfwGetKey( Renderer->Window, GLFW_KEY_LEFT_SHIFT ) != GLFW_PRESS) {

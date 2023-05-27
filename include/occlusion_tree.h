@@ -19,6 +19,7 @@ public:
    void createOcclusionTree(const std::string& obj_file_path);
    void setBuffer();
    void swapBuffers() { TargetBufferIndex ^= 1; }
+   void toggleRobustSwitch() { Robust = !Robust; }
    void adjustProximityTolerance(float delta) { ProximityTolerance = std::max( ProximityTolerance + delta, 0.0f ); }
    void adjustDistanceAttenuation(float delta)
    {
