@@ -16,7 +16,7 @@ class RendererGL final
 {
 public:
    RendererGL();
-   ~RendererGL();
+   ~RendererGL() = default;
 
    RendererGL(const RendererGL&) = delete;
    RendererGL(const RendererGL&&) = delete;
@@ -41,18 +41,13 @@ private:
 
    struct HighQualityAmbientOcclusion
    {
-      int TargetCanvas;
-      std::array<GLuint, 2> Canvas;
-      std::array<GLuint, 2> ResultTextures;
       std::unique_ptr<ShaderGL> AmbientOcclusionShader;
+      std::unique_ptr<ShaderGL> SceneShader;
       std::unique_ptr<OcclusionTree> BunnyObject;
 
       HighQualityAmbientOcclusion() :
-         TargetCanvas( 0 ), Canvas{ 0, 0 }, ResultTextures{ 0, 0 },
-         AmbientOcclusionShader( std::make_unique<ShaderGL>() ), BunnyObject( std::make_unique<OcclusionTree>() ) {}
-
-      [[nodiscard]] GLuint getResultTexture() const { return ResultTextures[TargetCanvas ^ 1]; }
-      void swapCanvas() { TargetCanvas ^= 1; }
+         AmbientOcclusionShader( std::make_unique<ShaderGL>() ), SceneShader( std::make_unique<ShaderGL>() ),
+         BunnyObject( std::make_unique<OcclusionTree>() ) {}
    };
 
    inline static RendererGL* Renderer = nullptr;
@@ -96,10 +91,11 @@ private:
 
    void setLights() const;
    void setDynamicAmbientOcclusionAlgorithm() const;
-   void setHighQualityAmbientOcclusionAlgorithm();
+   void setHighQualityAmbientOcclusionAlgorithm() const;
    void calculateDynamicAmbientOcclusion(int pass_num) const;
    void drawSceneWithDynamicAmbientOcclusion() const;
    void calculateHighQualityAmbientOcclusion(int pass_num);
+   void drawSceneWithHighQualityAmbientOcclusion() const;
    void drawText(const std::string& text, glm::vec2 start_position) const;
    void render();
 };

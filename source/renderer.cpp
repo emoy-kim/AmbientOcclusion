@@ -13,14 +13,6 @@ RendererGL::RendererGL() :
    printOpenGLInformation();
 }
 
-RendererGL::~RendererGL()
-{
-   if (HighQuality.ResultTextures[0] != 0) glDeleteTextures( 1, &HighQuality.ResultTextures[0] );
-   if (HighQuality.ResultTextures[1] != 0) glDeleteTextures( 1, &HighQuality.ResultTextures[1] );
-   if (HighQuality.Canvas[0] != 0) glDeleteFramebuffers( 1, &HighQuality.Canvas[0] );
-   if (HighQuality.Canvas[1] != 0) glDeleteFramebuffers( 1, &HighQuality.Canvas[1] );
-}
-
 void RendererGL::printOpenGLInformation()
 {
    std::cout << "****************************************************************\n";
@@ -263,29 +255,16 @@ void RendererGL::setDynamicAmbientOcclusionAlgorithm() const
    Dynamic.BunnyObject->setBuffer();
 }
 
-void RendererGL::setHighQualityAmbientOcclusionAlgorithm()
+void RendererGL::setHighQualityAmbientOcclusionAlgorithm() const
 {
-   HighQuality.AmbientOcclusionShader->setHighQualityAmbientOcclusionUniformLocations( 1 );
+   HighQuality.SceneShader->setHighQualitySceneUniformLocations( 1 );
+   HighQuality.AmbientOcclusionShader->setHighQualityAmbientOcclusionUniformLocations();
 
    const std::string sample_directory_path = std::string(CMAKE_SOURCE_DIR) + "/samples";
    const std::string obj_file_path = std::string( sample_directory_path + "/Bunny/bunny.obj");
    HighQuality.BunnyObject->createOcclusionTree( obj_file_path );
    HighQuality.BunnyObject->setDiffuseReflectionColor( { 1.0f, 1.0f, 1.0f, 1.0f } );
    HighQuality.BunnyObject->setBuffer();
-
-   glCreateTextures( GL_TEXTURE_2D, 2, HighQuality.ResultTextures.data() );
-   glTextureStorage2D( HighQuality.ResultTextures[0], 1, GL_RGBA8, FrameWidth, FrameHeight );
-   glTextureStorage2D( HighQuality.ResultTextures[1], 1, GL_RGBA8, FrameWidth, FrameHeight );
-
-   glCreateFramebuffers( 2, HighQuality.Canvas.data() );
-   glNamedFramebufferTexture( HighQuality.Canvas[0], GL_COLOR_ATTACHMENT0, HighQuality.ResultTextures[0], 0 );
-   glNamedFramebufferTexture( HighQuality.Canvas[1], GL_COLOR_ATTACHMENT0, HighQuality.ResultTextures[1], 0 );
-   glCheckNamedFramebufferStatus( HighQuality.Canvas[0], GL_FRAMEBUFFER );
-   glCheckNamedFramebufferStatus( HighQuality.Canvas[1], GL_FRAMEBUFFER );
-
-   constexpr std::array<GLfloat, 4> clear_data = { 0.0f, 0.0f, 0.0f, 1.0f };
-   glClearNamedFramebufferfv( HighQuality.Canvas[0], GL_COLOR, 0, &clear_data[0] );
-   glClearNamedFramebufferfv( HighQuality.Canvas[1], GL_COLOR, 0, &clear_data[0] );
 }
 
 void RendererGL::calculateDynamicAmbientOcclusion(int pass_num) const
@@ -329,33 +308,45 @@ void RendererGL::drawSceneWithDynamicAmbientOcclusion() const
 
 void RendererGL::calculateHighQualityAmbientOcclusion(int pass_num)
 {
-   const OcclusionTree* object = HighQuality.BunnyObject.get();
+   OcclusionTree* object = HighQuality.BunnyObject.get();
+   const int n = object->getDiskSize();
+   const auto m = static_cast<int>(std::ceil( std::sqrt( static_cast<float>(n) ) ));
+   const int g = getGroupSize( m );
    const ShaderGL* shader = HighQuality.AmbientOcclusionShader.get();
-   glViewport( 0, 0, FrameWidth, FrameHeight );
    glUseProgram( shader->getShaderProgram() );
+   shader->uniform1i( "Side", m );
+   shader->uniform1i( "DiskSize", n );
+   shader->uniform1i( "RootIndex", object->getRootIndex() );
+   shader->uniform1f( "ProximityTolerance", object->getProximityTolerance() );
+   shader->uniform1f( "DistanceAttenuation", object->getDistanceAttenuation() );
+   for (int i = 0; i < pass_num - 1; ++i) {
+      glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, object->getInDisksBuffer() );
+      glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 1, object->getOutDisksBuffer() );
+      glDispatchCompute( g, g, 1 );
+      glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
+      object->swapBuffers();
+   }
+   glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, 0 );
+   glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 1, 0 );
+}
+
+void RendererGL::drawSceneWithHighQualityAmbientOcclusion() const
+{
+   const ShaderGL* shader = HighQuality.SceneShader.get();
+   const OcclusionTree* object = HighQuality.BunnyObject.get();
+   glViewport( 0, 0, FrameWidth, FrameHeight );
+   glBindFramebuffer( GL_FRAMEBUFFER, 0 );
    Lights->transferUniformsToShader( shader );
+   shader->uniform1i( "LightIndex", ActiveLightIndex );
    shader->uniform1i( "Robust", object->robust() ? 1 : 0 );
-   shader->uniform1i( "LastPhase", 0 );
    shader->uniform1i( "UseBentNormal", UseBentNormal ? 1 : 0 );
    shader->uniform1i( "RootIndex", object->getRootIndex() );
    shader->uniform1f( "ProximityTolerance", object->getProximityTolerance() );
    shader->uniform1f( "DistanceAttenuation", object->getDistanceAttenuation() );
-   shader->uniform1i( "LightIndex", ActiveLightIndex );
+   shader->uniform1f( "TriangleAttenuation", object->getTriangleAttenuation() );
    shader->transferBasicTransformationUniforms( glm::mat4(1.0f), MainCamera.get() );
    object->transferUniformsToShader( shader );
-   glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, object->getDisksBuffer() );
-   glBindVertexArray( object->getVAO() );
-   for (int i = 0; i < pass_num - 1; ++i) {
-      glBindFramebuffer( GL_FRAMEBUFFER, HighQuality.Canvas[HighQuality.TargetCanvas] );
-      glBindTextureUnit( 0, HighQuality.getResultTexture() );
-      glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, object->getIBO() );
-      glDrawElements( object->getDrawMode(), object->getIndexNum(), GL_UNSIGNED_INT, nullptr );
-      HighQuality.swapCanvas();
-   }
-
-   glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-   shader->uniform1i( "LastPhase", 1 );
-   glBindTextureUnit( 0, HighQuality.getResultTexture() );
+   glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, object->getInDisksBuffer() );
    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, object->getIBO() );
    glDrawElements( object->getDrawMode(), object->getIndexNum(), GL_UNSIGNED_INT, nullptr );
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, 0 );
@@ -415,6 +406,7 @@ void RendererGL::render()
    }
    else if (AlgorithmToCompare == ALGORITHM_TO_COMPARE::HIGH_QUALITY) {
       calculateHighQualityAmbientOcclusion( PassNum );
+      drawSceneWithHighQualityAmbientOcclusion();
    }
 
    std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();

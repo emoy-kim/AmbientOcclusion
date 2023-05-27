@@ -164,7 +164,17 @@ void ShaderGL::setDynamicSceneUniformLocations(int light_num)
    addUniformLocation( "LightIndex" );
 }
 
-void ShaderGL::setHighQualityAmbientOcclusionUniformLocations(int light_num)
+void ShaderGL::setHighQualityAmbientOcclusionUniformLocations()
+{
+   addUniformLocation( "Side" );
+   addUniformLocation( "DiskSize" );
+   addUniformLocation( "RootIndex" );
+   addUniformLocation( "ProximityTolerance" );
+   addUniformLocation( "DistanceAttenuation" );
+   addUniformLocation( "TriangleAttenuation" );
+}
+
+void ShaderGL::setHighQualitySceneUniformLocations(int light_num)
 {
    setBasicTransformationUniforms();
 
@@ -173,8 +183,6 @@ void ShaderGL::setHighQualityAmbientOcclusionUniformLocations(int light_num)
    Location.MaterialDiffuse = glGetUniformLocation( ShaderProgram, "Material.DiffuseColor" );
    Location.MaterialSpecular = glGetUniformLocation( ShaderProgram, "Material.SpecularColor" );
    Location.MaterialSpecularExponent = glGetUniformLocation( ShaderProgram, "Material.SpecularExponent" );
-
-   Location.Texture[0] = glGetUniformLocation( ShaderProgram, "ResultTexture" );
 
    Location.UseLight = glGetUniformLocation( ShaderProgram, "UseLight" );
    Location.LightNum = glGetUniformLocation( ShaderProgram, "LightNum" );
@@ -194,7 +202,6 @@ void ShaderGL::setHighQualityAmbientOcclusionUniformLocations(int light_num)
    }
 
    addUniformLocation( "Robust" );
-   addUniformLocation( "LastPhase" );
    addUniformLocation( "UseBentNormal" );
    addUniformLocation( "RootIndex" );
    addUniformLocation( "ProximityTolerance" );

@@ -1,8 +1,8 @@
 #include "occlusion_tree.h"
 
 OcclusionTree::OcclusionTree() :
-   ObjectGL(), Robust( false ), RootIndex( NullIndex ), DisksBuffer( 0 ), ProximityTolerance( 8.0f ),
-   DistanceAttenuation( 0.0f ), TriangleAttenuation( 0.5f )
+   ObjectGL(), Robust( false ), RootIndex( NullIndex ), TargetBufferIndex( 0 ), DisksBuffers{ 0, 0 },
+   ProximityTolerance( 8.0f ), DistanceAttenuation( 0.0f ), TriangleAttenuation( 0.5f )
 {
 }
 
@@ -237,7 +237,13 @@ void OcclusionTree::createOcclusionTree(const std::string& obj_file_path)
 void OcclusionTree::setBuffer()
 {
    const auto size = static_cast<int>(Disks.size());
-   addCustomBufferObject<Disk>( "disks", size );
-   DisksBuffer = getCustomBufferID( "disks" );
-   glNamedBufferSubData( DisksBuffer, 0, static_cast<GLsizei>(size * sizeof( Disk )), Disks.data() );
+   addCustomBufferObject<Disk>( "in_disks", size );
+   addCustomBufferObject<Disk>( "out_disks", size );
+   DisksBuffers[TargetBufferIndex] = getCustomBufferID( "in_disks" );
+   DisksBuffers[TargetBufferIndex ^ 1] = getCustomBufferID( "out_disks" );
+   glNamedBufferSubData(
+      DisksBuffers[TargetBufferIndex], 0,
+      static_cast<GLsizei>(size * sizeof( Disk )),
+      Disks.data()
+   );
 }

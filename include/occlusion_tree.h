@@ -10,12 +10,15 @@ public:
 
    [[nodiscard]] bool robust() const { return Robust; }
    [[nodiscard]] int getRootIndex() const { return RootIndex; }
-   [[nodiscard]] GLuint getDisksBuffer() const { return DisksBuffer; }
+   [[nodiscard]] int getDiskSize() const { return static_cast<int>(Disks.size()); }
+   [[nodiscard]] GLuint getInDisksBuffer() const { return DisksBuffers[TargetBufferIndex]; }
+   [[nodiscard]] GLuint getOutDisksBuffer() const { return DisksBuffers[TargetBufferIndex ^ 1]; }
    [[nodiscard]] float getProximityTolerance() const { return ProximityTolerance; }
    [[nodiscard]] float getDistanceAttenuation() const { return DistanceAttenuation; }
    [[nodiscard]] float getTriangleAttenuation() const { return TriangleAttenuation; }
    void createOcclusionTree(const std::string& obj_file_path);
    void setBuffer();
+   void swapBuffers() { TargetBufferIndex ^= 1; }
    void adjustProximityTolerance(float delta) { ProximityTolerance = std::max( ProximityTolerance + delta, 0.0f ); }
    void adjustDistanceAttenuation(float delta)
    {
@@ -31,25 +34,28 @@ private:
 
    struct Disk
    {
-      alignas(4) float AreaOverPi;
       alignas(4) int ParentIndex;
       alignas(4) int NextIndex;
       alignas(4) int LeftChildIndex;
       alignas(4) int RightChildIndex;
+      alignas(4) float AreaOverPi;
+      alignas(4) float Accessibility;
       alignas(16) glm::vec3 Centroid;
       alignas(16) glm::vec3 Normal;
+      alignas(16) glm::vec3 BentNormal;
 
       Disk() :
-         AreaOverPi( 0.0f ), ParentIndex( NullIndex ), NextIndex( NullIndex ), LeftChildIndex( NullIndex ),
-         RightChildIndex( NullIndex ), Centroid( 0.0f ), Normal( 0.0f ) {}
+         ParentIndex( NullIndex ), NextIndex( NullIndex ), LeftChildIndex( NullIndex ), RightChildIndex( NullIndex ),
+         AreaOverPi( 0.0f ), Accessibility( 1.0f ), Centroid( 0.0f ), Normal( 0.0f ), BentNormal( 0.0f ) {}
       explicit Disk(int parent_index) :
-         AreaOverPi( 0.0f ), ParentIndex( parent_index ), NextIndex( NullIndex ), LeftChildIndex( NullIndex ),
-         RightChildIndex( NullIndex ), Centroid( 0.0f ), Normal( 0.0f ) {}
+         ParentIndex( parent_index ), NextIndex( NullIndex ), LeftChildIndex( NullIndex ), RightChildIndex( NullIndex ),
+         AreaOverPi( 0.0f ), Accessibility( 1.0f ), Centroid( 0.0f ), Normal( 0.0f ), BentNormal( 0.0f ) {}
    };
 
    bool Robust;
    int RootIndex;
-   GLuint DisksBuffer;
+   int TargetBufferIndex;
+   std::array<GLuint, 2> DisksBuffers;
    float ProximityTolerance;
    float DistanceAttenuation;
    float TriangleAttenuation;

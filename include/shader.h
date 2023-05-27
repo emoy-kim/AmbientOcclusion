@@ -44,7 +44,8 @@ public:
    void setTextUniformLocations();
    void setDynamicAmbientOcclusionUniformLocations();
    void setDynamicSceneUniformLocations(int light_num);
-   void setHighQualityAmbientOcclusionUniformLocations(int light_num);
+   void setHighQualityAmbientOcclusionUniformLocations();
+   void setHighQualitySceneUniformLocations(int light_num);
    void addUniformLocation(const std::string& name)
    {
       CustomLocations[name] = glGetUniformLocation( ShaderProgram, name.c_str() );
