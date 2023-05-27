@@ -8,6 +8,7 @@ public:
    OcclusionTree();
    ~OcclusionTree() override = default;
 
+   [[nodiscard]] bool robust() const { return Robust; }
    [[nodiscard]] uint getRootIndex() const { return RootIndex; }
    [[nodiscard]] GLuint getDisksBuffer() const { return DisksBuffer; }
    [[nodiscard]] float getProximityTolerance() const { return ProximityTolerance; }
@@ -46,6 +47,7 @@ private:
          RightChildIndex( NullIndex ), Centroid( 0.0f ), Normal( 0.0f ) {}
    };
 
+   bool Robust;
    uint RootIndex;
    GLuint DisksBuffer;
    float ProximityTolerance;

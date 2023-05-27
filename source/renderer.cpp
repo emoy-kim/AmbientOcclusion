@@ -334,6 +334,7 @@ void RendererGL::calculateHighQualityAmbientOcclusion(int pass_num)
    glViewport( 0, 0, FrameWidth, FrameHeight );
    glUseProgram( shader->getShaderProgram() );
    Lights->transferUniformsToShader( shader );
+   shader->uniform1i( "Robust", object->robust() ? 1 : 0 );
    shader->uniform1i( "LastPhase", 0 );
    shader->uniform1i( "UseBentNormal", UseBentNormal ? 1 : 0 );
    shader->uniform1ui( "RootIndex", object->getRootIndex() );

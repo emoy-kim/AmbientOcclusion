@@ -1,8 +1,8 @@
 #include "occlusion_tree.h"
 
 OcclusionTree::OcclusionTree() :
-   ObjectGL(), RootIndex( NullIndex ), DisksBuffer( 0 ), ProximityTolerance( 8.0f ), DistanceAttenuation( 0.0f ),
-   TriangleAttenuation( 0.5f )
+   ObjectGL(), Robust( false ), RootIndex( NullIndex ), DisksBuffer( 0 ), ProximityTolerance( 8.0f ),
+   DistanceAttenuation( 0.0f ), TriangleAttenuation( 0.5f )
 {
 }
 

@@ -193,6 +193,7 @@ void ShaderGL::setHighQualityAmbientOcclusionUniformLocations(int light_num)
       Location.Lights[i].LightAttenuationFactors = glGetUniformLocation( ShaderProgram, std::string("Lights[" + std::to_string( i ) + "].AttenuationFactors").c_str() );
    }
 
+   addUniformLocation( "Robust" );
    addUniformLocation( "LastPhase" );
    addUniformLocation( "UseBentNormal" );
    addUniformLocation( "RootIndex" );
