@@ -242,7 +242,12 @@ void OcclusionTree::setBuffer()
    DisksBuffers[TargetBufferIndex] = getCustomBufferID( "in_disks" );
    DisksBuffers[TargetBufferIndex ^ 1] = getCustomBufferID( "out_disks" );
    glNamedBufferSubData(
-      DisksBuffers[TargetBufferIndex], 0,
+      DisksBuffers[0], 0,
+      static_cast<GLsizei>(size * sizeof( Disk )),
+      Disks.data()
+   );
+   glNamedBufferSubData(
+      DisksBuffers[1], 0,
       static_cast<GLsizei>(size * sizeof( Disk )),
       Disks.data()
    );

@@ -63,10 +63,13 @@ void RendererGL::initialize()
       std::string(shader_directory_path + "/dynamic/ambient_occlusion.comp").c_str()
    );
    Dynamic.SceneShader->setShader(
-      std::string(shader_directory_path + "/dynamic/scene_shader.vert").c_str(),
-      std::string(shader_directory_path + "/dynamic/scene_shader.frag").c_str()
+      std::string(shader_directory_path + "/dynamic/ambient_occlusion.vert").c_str(),
+      std::string(shader_directory_path + "/dynamic/ambient_occlusion.frag").c_str()
    );
-   HighQuality.AmbientOcclusionShader->setShader(
+   HighQuality.AmbientOcclusionShader->setComputeShaders(
+      std::string(shader_directory_path + "/high-quality/ambient_occlusion.comp").c_str()
+   );
+   HighQuality.SceneShader->setShader(
       std::string(shader_directory_path + "/high-quality/ambient_occlusion.vert").c_str(),
       std::string(shader_directory_path + "/high-quality/ambient_occlusion.frag").c_str()
    );
@@ -306,7 +309,7 @@ void RendererGL::drawSceneWithDynamicAmbientOcclusion() const
    glDrawElements( object->getDrawMode(), object->getIndexNum(), GL_UNSIGNED_INT, nullptr );
 }
 
-void RendererGL::calculateHighQualityAmbientOcclusion(int pass_num)
+void RendererGL::calculateHighQualityAmbientOcclusion(int pass_num) const
 {
    OcclusionTree* object = HighQuality.BunnyObject.get();
    const int n = object->getDiskSize();
@@ -319,7 +322,8 @@ void RendererGL::calculateHighQualityAmbientOcclusion(int pass_num)
    shader->uniform1i( "RootIndex", object->getRootIndex() );
    shader->uniform1f( "ProximityTolerance", object->getProximityTolerance() );
    shader->uniform1f( "DistanceAttenuation", object->getDistanceAttenuation() );
-   for (int i = 0; i < pass_num - 1; ++i) {
+   for (int i = 1; i <= pass_num - 1; ++i) {
+      shader->uniform1i( "Phase", i );
       glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, object->getInDisksBuffer() );
       glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 1, object->getOutDisksBuffer() );
       glDispatchCompute( g, g, 1 );
@@ -336,6 +340,7 @@ void RendererGL::drawSceneWithHighQualityAmbientOcclusion() const
    const OcclusionTree* object = HighQuality.BunnyObject.get();
    glViewport( 0, 0, FrameWidth, FrameHeight );
    glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+   glUseProgram( shader->getShaderProgram() );
    Lights->transferUniformsToShader( shader );
    shader->uniform1i( "LightIndex", ActiveLightIndex );
    shader->uniform1i( "Robust", object->robust() ? 1 : 0 );
@@ -347,6 +352,7 @@ void RendererGL::drawSceneWithHighQualityAmbientOcclusion() const
    shader->transferBasicTransformationUniforms( glm::mat4(1.0f), MainCamera.get() );
    object->transferUniformsToShader( shader );
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, object->getInDisksBuffer() );
+   glBindVertexArray( object->getVAO() );
    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, object->getIBO() );
    glDrawElements( object->getDrawMode(), object->getIndexNum(), GL_UNSIGNED_INT, nullptr );
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, 0 );

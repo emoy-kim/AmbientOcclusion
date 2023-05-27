@@ -27,20 +27,26 @@ uniform MateralInfo Material;
 
 struct Disk
 {
-   float Area;
-   uint ParentIndex;
-   uint NextIndex;
-   uint LeftChildIndex;
-   uint RightChildIndex;
+   int ParentIndex;
+   int NextIndex;
+   int LeftChildIndex;
+   int RightChildIndex;
+   float AreaOverPi;
+   float Accessibility;
    vec3 Centroid;
    vec3 Normal;
+   vec3 BentNormal;
 };
-layout (binding = 0, std430) buffer Disks { Disk disks[]; };
 
-layout (binding = 0) uniform sampler2D ResultTexture;
+layout (binding = 0, std430) buffer InDisks { Disk in_disks[]; };
 
-uniform int LastPhase;
+uniform int Robust;
 uniform int UseBentNormal;
+uniform int RootIndex;
+uniform float ProximityTolerance;
+uniform float DistanceAttenuation;
+uniform float TriangleAttenuation;
+
 uniform int UseLight;
 uniform int LightIndex;
 uniform int LightNum;
@@ -50,6 +56,8 @@ uniform mat4 WorldMatrix;
 uniform mat4 ViewMatrix;
 uniform mat4 ProjectionMatrix;
 
+in vec3 receiver_position;
+in vec3 receiver_normal;
 in vec3 position_in_ec;
 in vec3 normal_in_ec;
 
@@ -57,6 +65,7 @@ layout (location = 0) out vec4 final_color;
 
 const float zero = 0.0f;
 const float one = 1.0f;
+const float epsilon = 1e-16f;
 
 bool IsPointLight(in vec4 light_position)
 {
@@ -121,20 +130,64 @@ vec4 calculateLightingEquation(in vec3 normal)
    return color;
 }
 
+float getShadowApproximation(
+   in vec3 v,
+   in float squared_distance,
+   in vec3 receiver_normal,
+   in vec3 emitter_normal,
+   in float emitter_area
+)
+{
+   return
+      emitter_area / ( emitter_area + squared_distance ) *
+      clamp( dot( emitter_normal, -v ), zero, one ) *
+      clamp( dot( receiver_normal, v ), zero, one );
+}
+
+float calculateOcclusion(out vec3 bent_normal)
+{
+   bent_normal = receiver_normal;
+   int emitter_index = RootIndex;
+   float total_shadow = zero;
+   while (emitter_index >= 0) {
+      vec3 emitter_position = in_disks[emitter_index].Centroid;
+      vec3 emitter_normal = in_disks[emitter_index].Normal;
+      float emitter_area = in_disks[emitter_index].AreaOverPi;
+      vec3 v = emitter_position - receiver_position;
+      float squared_distance = dot( v, v ) + epsilon;
+      if (in_disks[emitter_index].LeftChildIndex >= 0 && squared_distance < emitter_area * ProximityTolerance) {
+         emitter_index = in_disks[emitter_index].LeftChildIndex;
+         continue;
+      }
+      v *= inversesqrt( squared_distance );
+      float shadow = getShadowApproximation( v, squared_distance, receiver_normal, emitter_normal, emitter_area );
+      shadow *= in_disks[emitter_index].Accessibility;
+      shadow /= (one + DistanceAttenuation * sqrt( squared_distance ));
+
+      total_shadow += shadow;
+      bent_normal -= shadow * v;
+      emitter_index = in_disks[emitter_index].NextIndex;
+   }
+   bent_normal = normalize( bent_normal );
+   return clamp( one - total_shadow, zero, one );
+}
+
+float calculateRobustOcclusion(out vec3 bent_normal)
+{
+   return one;
+}
+
 void main()
 {
-   vec4 previous_result = texelFetch( ResultTexture, ivec2(gl_FragCoord.xy), 0 );
-   if (bool(LastPhase)) {
-      final_color = vec4(one);
-      if (bool(UseLight)) {
-         vec3 normal = bool(UseBentNormal) ? previous_result.rgb : normal_in_ec;
-         final_color *= calculateLightingEquation( normal );
-      }
-      else final_color *= Material.DiffuseColor;
-      float accessibility = previous_result.a;
-      final_color *= accessibility;
-   }
-   else {
+   final_color = vec4(one);
 
+   vec3 bent_normal;
+   float accessibility = bool(Robust) ? calculateRobustOcclusion( bent_normal ) : calculateOcclusion( bent_normal );
+   if (bool(UseLight)) {
+      vec3 normal = bool(UseBentNormal) ? vec3(ViewMatrix * WorldMatrix * vec4(bent_normal, zero)) : normal_in_ec;
+      final_color *= calculateLightingEquation( normal );
    }
+   else final_color *= Material.DiffuseColor;
+
+   final_color *= accessibility;
 }

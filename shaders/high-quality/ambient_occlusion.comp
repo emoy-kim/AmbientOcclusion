@@ -1,0 +1,82 @@
+#version 460
+
+layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+struct Disk
+{
+   int ParentIndex;
+   int NextIndex;
+   int LeftChildIndex;
+   int RightChildIndex;
+   float AreaOverPi;
+   float Accessibility;
+   vec3 Centroid;
+   vec3 Normal;
+   vec3 BentNormal;
+};
+
+layout (binding = 0, std430) buffer InDisks { Disk in_disks[]; };
+layout (binding = 1, std430) buffer OutDisks { Disk out_disks[]; };
+
+uniform int Phase;
+uniform int Side;
+uniform int DiskSize;
+uniform int RootIndex;
+uniform float ProximityTolerance;
+uniform float DistanceAttenuation;
+
+const float zero = 0.0f;
+const float one = 1.0f;
+const float epsilon = 1e-16f;
+
+float getShadowApproximation(
+   in vec3 v,
+   in float squared_distance,
+   in vec3 receiver_normal,
+   in vec3 emitter_normal,
+   in float emitter_area
+)
+{
+   return
+      emitter_area / ( emitter_area + squared_distance ) *
+      clamp( dot( emitter_normal, -v ), zero, one ) *
+      clamp( dot( receiver_normal, v ), zero, one );
+}
+
+void main()
+{
+   int x = int(gl_GlobalInvocationID.x);
+   int y = int(gl_GlobalInvocationID.y);
+   if (x >= Side || y >= Side) return;
+
+   int index = y * Side + x;
+   if (index >= DiskSize) return;
+
+   int emitter_index = RootIndex;
+   float total_shadow = zero;
+   vec3 receiver_position = in_disks[index].Centroid;
+   vec3 receiver_normal = in_disks[index].Normal;
+   vec3 bent_normal = receiver_normal;
+   while (emitter_index >= 0) {
+      vec3 emitter_position = in_disks[emitter_index].Centroid;
+      vec3 emitter_normal = in_disks[emitter_index].Normal;
+      float emitter_area = in_disks[emitter_index].AreaOverPi;
+      vec3 v = emitter_position - receiver_position;
+      float squared_distance = dot( v, v ) + epsilon;
+      if (in_disks[emitter_index].LeftChildIndex >= 0 && squared_distance < emitter_area * ProximityTolerance) {
+         emitter_index = in_disks[emitter_index].LeftChildIndex;
+         continue;
+      }
+      v *= inversesqrt( squared_distance );
+      float shadow = getShadowApproximation( v, squared_distance, receiver_normal, emitter_normal, emitter_area );
+      if (Phase > 1) shadow *= in_disks[emitter_index].Accessibility;
+      shadow /= (one + DistanceAttenuation * sqrt( squared_distance ));
+
+      total_shadow += shadow;
+      bent_normal -= shadow * v;
+      emitter_index = in_disks[emitter_index].NextIndex;
+   }
+   bent_normal = normalize( bent_normal );
+   out_disks[index].BentNormal = bent_normal;
+   out_disks[index].Accessibility = clamp( one - total_shadow, zero, one );
+}

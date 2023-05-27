@@ -94,7 +94,7 @@ private:
    void setHighQualityAmbientOcclusionAlgorithm() const;
    void calculateDynamicAmbientOcclusion(int pass_num) const;
    void drawSceneWithDynamicAmbientOcclusion() const;
-   void calculateHighQualityAmbientOcclusion(int pass_num);
+   void calculateHighQualityAmbientOcclusion(int pass_num) const;
    void drawSceneWithHighQualityAmbientOcclusion() const;
    void drawText(const std::string& text, glm::vec2 start_position) const;
    void render();
