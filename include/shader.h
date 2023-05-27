@@ -54,6 +54,10 @@ public:
    {
       glProgramUniform1i( ShaderProgram, CustomLocations.find( name )->second, value );
    }
+   void uniform1ui(const char* name, uint value) const
+   {
+      glProgramUniform1ui( ShaderProgram, CustomLocations.find( name )->second, value );
+   }
    void uniform1f(const char* name, float value) const
    {
       glProgramUniform1f( ShaderProgram, CustomLocations.find( name )->second, value );

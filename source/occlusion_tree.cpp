@@ -1,6 +1,8 @@
 #include "occlusion_tree.h"
 
-OcclusionTree::OcclusionTree() : ObjectGL(), RootIndex( NullIndex ), DisksBuffer( 0 )
+OcclusionTree::OcclusionTree() :
+   ObjectGL(), RootIndex( NullIndex ), DisksBuffer( 0 ), ProximityTolerance( 8.0f ), DistanceAttenuation( 0.0f ),
+   TriangleAttenuation( 0.5f )
 {
 }
 
@@ -119,8 +121,8 @@ void OcclusionTree::setParentDisk(Disk& parent_disk)
 {
    const Disk& left_disk = Disks[parent_disk.LeftChildIndex];
    const Disk& right_disk = Disks[parent_disk.RightChildIndex];
-   parent_disk.Area = left_disk.Area + right_disk.Area;
-   const float weight = right_disk.Area / parent_disk.Area;
+   parent_disk.AreaOverPi = left_disk.AreaOverPi + right_disk.AreaOverPi;
+   const float weight = right_disk.AreaOverPi / parent_disk.AreaOverPi;
    parent_disk.Centroid = glm::mix( left_disk.Centroid, right_disk.Centroid, weight );
    parent_disk.Normal = glm::normalize( glm::mix( left_disk.Normal, right_disk.Normal, weight ) );
    if (std::isnan( parent_disk.Centroid.x )) parent_disk.Centroid = (left_disk.Centroid + right_disk.Centroid) * 0.5f;
@@ -144,7 +146,7 @@ uint OcclusionTree::build(
       const glm::vec3 v2 = Vertices[IndexBuffer[i + 2]];
       const glm::vec3 n = glm::cross( v1 - v0, v2 - v0 );
       disk.Normal = glm::normalize( n );
-      disk.Area = glm::length( n ) * 0.5f;
+      disk.AreaOverPi = glm::length( n ) * 0.5f / glm::pi<float>();
       disk.Centroid = (v0 + v1 + v2) / 3.0f;
       disk.ParentIndex = parent_index;
       Disks[*begin] = disk;

@@ -195,6 +195,10 @@ void ShaderGL::setHighQualityAmbientOcclusionUniformLocations(int light_num)
 
    addUniformLocation( "LastPhase" );
    addUniformLocation( "UseBentNormal" );
+   addUniformLocation( "RootIndex" );
+   addUniformLocation( "ProximityTolerance" );
+   addUniformLocation( "DistanceAttenuation" );
+   addUniformLocation( "TriangleAttenuation" );
    addUniformLocation( "LightIndex" );
 }
 

@@ -138,6 +138,33 @@ void RendererGL::keyboard(GLFWwindow* window, int key, int scancode, int action,
             else std::cout << "Original Normal Used\n";
          }
          break;
+      case GLFW_KEY_E:
+         if (!Renderer->Pause && Renderer->AlgorithmToCompare == ALGORITHM_TO_COMPARE::HIGH_QUALITY) {
+            if (glfwGetKey( Renderer->Window, GLFW_KEY_LEFT_SHIFT ) != GLFW_PRESS) {
+               Renderer->HighQuality.BunnyObject->adjustProximityTolerance( 1.0f );
+            }
+            else Renderer->HighQuality.BunnyObject->adjustProximityTolerance( -1.0f );
+            std::cout << "ProximityTolerance: " << Renderer->HighQuality.BunnyObject->getProximityTolerance() << "\n";
+         }
+         break;
+      case GLFW_KEY_D:
+         if (!Renderer->Pause && Renderer->AlgorithmToCompare == ALGORITHM_TO_COMPARE::HIGH_QUALITY) {
+            if (glfwGetKey( Renderer->Window, GLFW_KEY_LEFT_SHIFT ) != GLFW_PRESS) {
+               Renderer->HighQuality.BunnyObject->adjustDistanceAttenuation( 0.1f );
+            }
+            else Renderer->HighQuality.BunnyObject->adjustDistanceAttenuation( -0.1f );
+            std::cout << "DistanceAttenuation: " << Renderer->HighQuality.BunnyObject->getDistanceAttenuation() << "\n";
+         }
+         break;
+      case GLFW_KEY_T:
+         if (!Renderer->Pause && Renderer->AlgorithmToCompare == ALGORITHM_TO_COMPARE::HIGH_QUALITY) {
+            if (glfwGetKey( Renderer->Window, GLFW_KEY_LEFT_SHIFT ) != GLFW_PRESS) {
+               Renderer->HighQuality.BunnyObject->adjustTriangleAttenuation( 0.1f );
+            }
+            else Renderer->HighQuality.BunnyObject->adjustTriangleAttenuation( -0.1f );
+            std::cout << "TriangleAttenuation: " << Renderer->HighQuality.BunnyObject->getTriangleAttenuation() << "\n";
+         }
+         break;
       case GLFW_KEY_C:
          Renderer->writeFrame( "../result.png" );
          break;
@@ -309,6 +336,9 @@ void RendererGL::calculateHighQualityAmbientOcclusion(int pass_num)
    Lights->transferUniformsToShader( shader );
    shader->uniform1i( "LastPhase", 0 );
    shader->uniform1i( "UseBentNormal", UseBentNormal ? 1 : 0 );
+   shader->uniform1ui( "RootIndex", object->getRootIndex() );
+   shader->uniform1f( "ProximityTolerance", object->getProximityTolerance() );
+   shader->uniform1f( "DistanceAttenuation", object->getDistanceAttenuation() );
    shader->uniform1i( "LightIndex", ActiveLightIndex );
    shader->transferBasicTransformationUniforms( glm::mat4(1.0f), MainCamera.get() );
    object->transferUniformsToShader( shader );
