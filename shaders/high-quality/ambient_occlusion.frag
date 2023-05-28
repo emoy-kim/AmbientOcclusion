@@ -347,6 +347,7 @@ float calculateFormFactor(
    in vec3 receiver_normal
 )
 {
+   const float one_over_two_pi = 0.159154943091895335768883763372514362f;
    vec3 r0 = normalize( q0 - receiver_position );
    vec3 r1 = normalize( q1 - receiver_position );
    vec3 r2 = normalize( q2 - receiver_position );
@@ -355,7 +356,12 @@ float calculateFormFactor(
    vec3 g1 = normalize( cross( r2, r1 ) );
    vec3 g2 = normalize( cross( r3, r2 ) );
    vec3 g3 = normalize( cross( r0, r3 ) );
-   float a = acos( clamp( dot( r0, r1 ), -one, one ) );
+   float factor = acos( clamp( dot( r0, r1 ), -one, one ) ) * clamp( dot( receiver_normal, g0 ), -one, one );
+   factor += acos( clamp( dot( r1, r2 ), -one, one ) ) * clamp( dot( receiver_normal, g1 ), -one, one );
+   factor += acos( clamp( dot( r2, r3 ), -one, one ) ) * clamp( dot( receiver_normal, g2 ), -one, one );
+   factor += acos( clamp( dot( r3, r0 ), -one, one ) ) * clamp( dot( receiver_normal, g3 ), -one, one );
+   factor *= one_over_two_pi;
+   return max( factor, zero );
 }
 
 float getFormFactor(in vec3 receiver_position, in vec3 receiver_normal, in int index)
@@ -403,7 +409,7 @@ float calculateOcclusion(out vec3 bent_normal)
 float calculateRobustOcclusion(out vec3 bent_normal)
 {
    bent_normal = receiver_normal;
-   int parent_next = 0;
+   int parent_next = -1;
    int emitter_index = RootIndex;
    float total_shadow = zero;
    float parent_area = one;
@@ -438,6 +444,8 @@ float calculateRobustOcclusion(out vec3 bent_normal)
                // with low TriangleAttenuation, small features like creases and cracks are emphasized.
                // with high TriangleAttenuation, the influence of far away (probably invisible) triangles is lessened.
                shadow *= pow( in_disks[emitter_index].Accessibility, TriangleAttenuation );
+
+               shadow /= (one + DistanceAttenuation * sqrt( squared_distance ));
             }
          }
          else {
@@ -446,9 +454,10 @@ float calculateRobustOcclusion(out vec3 bent_normal)
             shadow /= (one + DistanceAttenuation * sqrt( squared_distance ));
          }
 
-         total_shadow += shadow;
          bent_normal -= shadow * v;
+         total_shadow += mix( shadow, parent_shadow * emitter_area / parent_area, parent_weight );
          emitter_index = in_disks[emitter_index].NextIndex;
+         if (emitter_index == parent_next) parent_weight = zero;
       }
    }
    bent_normal = normalize( bent_normal );
