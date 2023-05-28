@@ -2,7 +2,8 @@
 
 OcclusionTree::OcclusionTree() :
    ObjectGL(), Robust( false ), RootIndex( NullIndex ), TargetBufferIndex( 0 ), DisksBuffers{ 0, 0 },
-   ProximityTolerance( 8.0f ), DistanceAttenuation( 0.0f ), TriangleAttenuation( 0.5f )
+   IndicesBuffer( 0 ), VerticesBuffer( 0 ), ProximityTolerance( 8.0f ), DistanceAttenuation( 0.0f ),
+   TriangleAttenuation( 0.5f )
 {
 }
 
@@ -236,19 +237,27 @@ void OcclusionTree::createOcclusionTree(const std::string& obj_file_path)
 
 void OcclusionTree::setBuffer()
 {
-   const auto size = static_cast<int>(Disks.size());
-   addCustomBufferObject<Disk>( "in_disks", size );
-   addCustomBufferObject<Disk>( "out_disks", size );
+   const auto disk_size = static_cast<int>(Disks.size());
+   const auto index_size = static_cast<int>(IndexBuffer.size());
+   const auto vertex_size = static_cast<int>(Vertices.size());
+   addCustomBufferObject<Disk>("in_disks", disk_size );
+   addCustomBufferObject<Disk>("out_disks", disk_size );
+   addCustomBufferObject<int>( "indices", index_size );
+   addCustomBufferObject<glm::vec3>( "vertices", vertex_size );
    DisksBuffers[TargetBufferIndex] = getCustomBufferID( "in_disks" );
    DisksBuffers[TargetBufferIndex ^ 1] = getCustomBufferID( "out_disks" );
+   IndicesBuffer = getCustomBufferID( "indices" );
+   VerticesBuffer = getCustomBufferID( "vertices" );
    glNamedBufferSubData(
       DisksBuffers[0], 0,
-      static_cast<GLsizei>(size * sizeof( Disk )),
+      static_cast<GLsizei>(disk_size * sizeof( Disk )),
       Disks.data()
    );
    glNamedBufferSubData(
       DisksBuffers[1], 0,
-      static_cast<GLsizei>(size * sizeof( Disk )),
+      static_cast<GLsizei>(disk_size * sizeof( Disk )),
       Disks.data()
    );
+    glNamedBufferSubData( IndicesBuffer, 0, index_size, IndexBuffer.data() );
+    glNamedBufferSubData( VerticesBuffer, 0, vertex_size, Vertices.data() );
 }

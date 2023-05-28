@@ -13,6 +13,8 @@ public:
    [[nodiscard]] int getDiskSize() const { return static_cast<int>(Disks.size()); }
    [[nodiscard]] GLuint getInDisksBuffer() const { return DisksBuffers[TargetBufferIndex]; }
    [[nodiscard]] GLuint getOutDisksBuffer() const { return DisksBuffers[TargetBufferIndex ^ 1]; }
+   [[nodiscard]] GLuint getIndicesBuffer() const { return IndicesBuffer; }
+   [[nodiscard]] GLuint getVerticesBuffer() const { return VerticesBuffer; }
    [[nodiscard]] float getProximityTolerance() const { return ProximityTolerance; }
    [[nodiscard]] float getDistanceAttenuation() const { return DistanceAttenuation; }
    [[nodiscard]] float getTriangleAttenuation() const { return TriangleAttenuation; }
@@ -57,6 +59,8 @@ private:
    int RootIndex;
    int TargetBufferIndex;
    std::array<GLuint, 2> DisksBuffers;
+   GLuint IndicesBuffer;
+   GLuint VerticesBuffer;
    float ProximityTolerance;
    float DistanceAttenuation;
    float TriangleAttenuation;

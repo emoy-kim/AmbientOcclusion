@@ -345,12 +345,13 @@ void RendererGL::drawSceneWithHighQualityAmbientOcclusion() const
 {
    const ShaderGL* shader = HighQuality.SceneShader.get();
    const OcclusionTree* object = HighQuality.BunnyObject.get();
+   const bool robust = object->robust();
    glViewport( 0, 0, FrameWidth, FrameHeight );
    glBindFramebuffer( GL_FRAMEBUFFER, 0 );
    glUseProgram( shader->getShaderProgram() );
    Lights->transferUniformsToShader( shader );
    shader->uniform1i( "LightIndex", ActiveLightIndex );
-   shader->uniform1i( "Robust", object->robust() ? 1 : 0 );
+   shader->uniform1i( "Robust", robust ? 1 : 0 );
    shader->uniform1i( "UseBentNormal", UseBentNormal ? 1 : 0 );
    shader->uniform1i( "RootIndex", object->getRootIndex() );
    shader->uniform1f( "ProximityTolerance", object->getProximityTolerance() );
@@ -359,10 +360,16 @@ void RendererGL::drawSceneWithHighQualityAmbientOcclusion() const
    shader->transferBasicTransformationUniforms( glm::mat4(1.0f), MainCamera.get() );
    object->transferUniformsToShader( shader );
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, object->getInDisksBuffer() );
+   if (robust) {
+       glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 1, object->getIndicesBuffer() );
+       glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 2, object->getVerticesBuffer() );
+   }
    glBindVertexArray( object->getVAO() );
    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, object->getIBO() );
    glDrawElements( object->getDrawMode(), object->getIndexNum(), GL_UNSIGNED_INT, nullptr );
    glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, 0 );
+   glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 1, 0 );
+   glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 2, 0 );
 }
 
 void RendererGL::drawText(const std::string& text, glm::vec2 start_position) const
