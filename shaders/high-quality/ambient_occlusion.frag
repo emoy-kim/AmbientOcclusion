@@ -39,6 +39,8 @@ struct Disk
 };
 
 layout (binding = 0, std430) buffer InDisks { Disk in_disks[]; };
+layout (binding = 1, std430) buffer Indices { int indices[]; };
+layout (binding = 2, std430) buffer Vertices { vec3 vertices[]; };
 
 uniform int Robust;
 uniform int UseBentNormal;
@@ -144,6 +146,232 @@ float getShadowApproximation(
       clamp( dot( receiver_normal, v ), zero, one );
 }
 
+vec3 getPointOnPlane(in vec3 p0, in vec3 p1, in float signed_distance0, in float signed_distance1)
+{
+   //              p0
+   //             / .
+   //            /  d0 (= signed_distance0)
+   //           /   .
+   //  --------x------ plane         x = p0 + (d0 / (d0 + d1) * (p1 - p0)
+   //         /     .
+   //        /      d1 (= -signed_distance1)
+   //       /       .
+   //     p1
+   return p0 + (signed_distance0 / (signed_distance0 - signed_distance1)) * (p1 - p0);
+}
+
+void getVisiblePoints(
+   out vec3 q0,
+   out vec3 q1,
+   out vec3 q2,
+   out vec3 q3,
+   in vec3 receiver_position,
+   in vec3 receiver_normal,
+   in vec3 emitter_v0,
+   in vec3 emitter_v1,
+   in vec3 emitter_v2
+)
+{
+   // plane equation ax + by + cz + d = 0 can be represented as n dot (p' - p) = 0.
+   // (p: point on the plane, n: normal from p, p': point on the plane, not p)
+   float d = dot( receiver_normal, receiver_position );
+   float signed_distances[3] = {
+      dot( receiver_normal, emitter_v0 ) - d,
+      dot( receiver_normal, emitter_v1 ) - d,
+      dot( receiver_normal, emitter_v2 ) - d,
+   };
+   if (abs( signed_distances[0] ) <= 1e-6f) signed_distances[0] = zero;
+   if (abs( signed_distances[1] ) <= 1e-6f) signed_distances[0] = zero;
+   if (abs( signed_distances[2] ) <= 1e-6f) signed_distances[0] = zero;
+
+   if (signed_distances[0] > zero) {
+      if (signed_distances[1] > zero) {
+         if (signed_distances[2] < zero) {
+            // ++-
+            q0 = emitter_v0;
+            q1 = emitter_v1;
+            q2 = getPointOnPlane( emitter_v1, emitter_v2, signed_distances[1], signed_distances[2] );
+            q3 = getPointOnPlane( emitter_v0, emitter_v2, signed_distances[0], signed_distances[2] );
+         }
+         else {
+            // +++ and ++0
+            q0 = emitter_v0;
+            q1 = emitter_v1;
+            q2 = emitter_v2;
+            q3 = emitter_v2;
+         }
+      }
+      else if (signed_distances[1] < zero) {
+         if (signed_distances[2] > zero) {
+            // +-+
+            q0 = emitter_v0;
+            q1 = getPointOnPlane( emitter_v0, emitter_v1, signed_distances[0], signed_distances[1] );
+            q2 = getPointOnPlane( emitter_v2, emitter_v1, signed_distances[2], signed_distances[1] );
+            q3 = emitter_v2;
+         }
+         else if (signed_distances[2] < zero) {
+            // +--
+            q0 = emitter_v0;
+            q1 = getPointOnPlane( emitter_v0, emitter_v1, signed_distances[0], signed_distances[1] );
+            q2 = getPointOnPlane( emitter_v0, emitter_v2, signed_distances[0], signed_distances[2] );
+            q3 = q2;
+         }
+         else {
+            // +-0
+            q0 = emitter_v0;
+            q1 = getPointOnPlane( emitter_v0, emitter_v1, signed_distances[0], signed_distances[1] );
+            q2 = emitter_v2;
+            q3 = q2;
+         }
+      }
+      else {
+         if (signed_distances[2] < zero) {
+            // +0-
+            q0 = emitter_v0;
+            q1 = emitter_v1;
+            q2 = getPointOnPlane( emitter_v0, emitter_v2, signed_distances[0], signed_distances[2] );
+            q3 = q2;
+         }
+         else {
+            // +0+ and +00
+            q0 = emitter_v0;
+            q1 = emitter_v1;
+            q2 = emitter_v2;
+            q3 = q2;
+         }
+      }
+   }
+   else if (signed_distances[0] < zero) {
+      if (signed_distances[1] > zero) {
+         if (signed_distances[2] > zero) {
+            // -++
+            q0 = getPointOnPlane( emitter_v1, emitter_v0, signed_distances[1], signed_distances[0] );
+            q1 = emitter_v1;
+            q2 = emitter_v2;
+            q3 = getPointOnPlane( emitter_v2, emitter_v0, signed_distances[2], signed_distances[0] );
+         }
+         else if (signed_distances[2] < zero) {
+            // -+-
+            q0 = getPointOnPlane( emitter_v1, emitter_v0, signed_distances[1], signed_distances[0] );
+            q1 = emitter_v1;
+            q2 = getPointOnPlane( emitter_v1, emitter_v2, signed_distances[1], signed_distances[2] );
+            q3 = q2;
+         }
+         else {
+            // -+0
+            q0 = getPointOnPlane( emitter_v1, emitter_v0, signed_distances[1], signed_distances[0] );
+            q1 = emitter_v1;
+            q2 = emitter_v2;
+            q3 = q2;
+         }
+      }
+      else if (signed_distances[1] < zero) {
+         if (signed_distances[2] > zero) {
+            // --+
+            q0 = getPointOnPlane( emitter_v2, emitter_v0, signed_distances[2], signed_distances[0] );
+            q1 = getPointOnPlane( emitter_v2, emitter_v1, signed_distances[2], signed_distances[1] );
+            q2 = emitter_v2;
+            q3 = q2;
+         }
+         else {
+            // --- and --0
+            q0 = q1 = q2 = q3 = receiver_position;
+         }
+      }
+      else {
+         if (signed_distances[2] > zero) {
+            // -0+
+            q0 = getPointOnPlane( emitter_v2, emitter_v0, signed_distances[2], signed_distances[0] );
+            q1 = emitter_v1;
+            q2 = emitter_v2;
+            q3 = q2;
+         }
+         else {
+            // -0- and -00
+            q0 = q1 = q2 = q3 = receiver_position;
+         }
+      }
+   }
+   else {
+      if (signed_distances[1] > zero) {
+         if (signed_distances[2] < zero) {
+            // 0+-
+            q0 = emitter_v0;
+            q1 = emitter_v1;
+            q2 = getPointOnPlane( emitter_v1, emitter_v2, signed_distances[1], signed_distances[2] );
+            q3 = q2;
+         }
+         else {
+            // 0+0 and 0++
+            q0 = emitter_v0;
+            q1 = emitter_v1;
+            q2 = emitter_v2;
+            q3 = q2;
+         }
+      }
+      else if (signed_distances[1] < zero) {
+         if (signed_distances[2] > zero) {
+            // 0-+
+            q0 = emitter_v0;
+            q1 = getPointOnPlane( emitter_v2, emitter_v1, signed_distances[2], signed_distances[1] );
+            q2 = emitter_v2;
+            q3 = q2;
+         }
+         else {
+            // 0-- and 0-0
+            q0 = q1 = q2 = q3 = receiver_position;
+         }
+      }
+      else {
+         if (signed_distances[2] > zero) {
+            // 00+
+            q0 = emitter_v0;
+            q1 = emitter_v1;
+            q2 = emitter_v2;
+            q3 = q2;
+         }
+         else {
+            // 00- and 000
+            q0 = q1 = q2 = q3 = receiver_position;
+         }
+      }
+   }
+}
+
+float calculateFormFactor(
+   in vec3 q0,
+   in vec3 q1,
+   in vec3 q2,
+   in vec3 q3,
+   in vec3 receiver_position,
+   in vec3 receiver_normal
+)
+{
+   vec3 r0 = normalize( q0 - receiver_position );
+   vec3 r1 = normalize( q1 - receiver_position );
+   vec3 r2 = normalize( q2 - receiver_position );
+   vec3 r3 = normalize( q3 - receiver_position );
+   vec3 g0 = normalize( cross( r1, r0 ) );
+   vec3 g1 = normalize( cross( r2, r1 ) );
+   vec3 g2 = normalize( cross( r3, r2 ) );
+   vec3 g3 = normalize( cross( r0, r3 ) );
+   float a = acos( clamp( dot( r0, r1 ), -one, one ) );
+}
+
+float getFormFactor(in vec3 receiver_position, in vec3 receiver_normal, in int index)
+{
+   int face_index = 3 * index;
+   int i0 = indices[face_index];
+   int i1 = indices[face_index + 1];
+   int i2 = indices[face_index + 2];
+   vec3 v0 = vertices[i0];
+   vec3 v1 = vertices[i1];
+   vec3 v2 = vertices[i2];
+   vec3 q0, q1, q2, q3;
+   getVisiblePoints( q0, q1, q2, q3, receiver_position, receiver_normal, v0, v1, v2 );
+   return calculateFormFactor( q0, q1, q2, q3, receiver_position, receiver_normal );
+}
+
 float calculateOcclusion(out vec3 bent_normal)
 {
    bent_normal = receiver_normal;
@@ -174,7 +402,57 @@ float calculateOcclusion(out vec3 bent_normal)
 
 float calculateRobustOcclusion(out vec3 bent_normal)
 {
-   return one;
+   bent_normal = receiver_normal;
+   int parent_next = 0;
+   int emitter_index = RootIndex;
+   float total_shadow = zero;
+   float parent_area = one;
+   float parent_shadow = zero;
+   float parent_weight = zero;
+   const float zone_radius = 0.1f;
+   while (emitter_index >= 0) {
+      vec3 emitter_position = in_disks[emitter_index].Centroid;
+      vec3 emitter_normal = in_disks[emitter_index].Normal;
+      float emitter_area = in_disks[emitter_index].AreaOverPi;
+      vec3 v = emitter_position - receiver_position;
+      float squared_distance = dot( v, v ) + epsilon;
+      v *= inversesqrt( squared_distance );
+      float close = ProximityTolerance * emitter_area;
+      if (in_disks[emitter_index].LeftChildIndex >= 0 && squared_distance < close * (one + zone_radius)) {
+         parent_next = in_disks[emitter_index].NextIndex;
+         emitter_index = in_disks[emitter_index].LeftChildIndex;
+         float shadow = getShadowApproximation( v, squared_distance, receiver_normal, emitter_normal, emitter_area );
+         shadow *= in_disks[emitter_index].Accessibility;
+         shadow /= (one + DistanceAttenuation * sqrt( squared_distance ));
+         parent_shadow = shadow;
+         parent_area = emitter_area;
+         parent_weight =
+            clamp( (squared_distance - (one - zone_radius) * close) / (2.0f * zone_radius * close), zero, one );
+      }
+      else {
+         float shadow = zero;
+         if (in_disks[emitter_index].LeftChildIndex < 0) {
+            if (dot( emitter_normal, -v ) >= zero) {
+               shadow = getFormFactor( receiver_position, receiver_normal, 0 );
+
+               // with low TriangleAttenuation, small features like creases and cracks are emphasized.
+               // with high TriangleAttenuation, the influence of far away (probably invisible) triangles is lessened.
+               shadow *= pow( in_disks[emitter_index].Accessibility, TriangleAttenuation );
+            }
+         }
+         else {
+            shadow = getShadowApproximation( v, squared_distance, receiver_normal, emitter_normal, emitter_area );
+            shadow *= in_disks[emitter_index].Accessibility;
+            shadow /= (one + DistanceAttenuation * sqrt( squared_distance ));
+         }
+
+         total_shadow += shadow;
+         bent_normal -= shadow * v;
+         emitter_index = in_disks[emitter_index].NextIndex;
+      }
+   }
+   bent_normal = normalize( bent_normal );
+   return clamp( one - total_shadow, zero, one );
 }
 
 void main()
