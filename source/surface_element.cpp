@@ -402,6 +402,7 @@ void SurfaceElement::createSurfaceElements(const std::string& obj_file_path)
       std::shared_ptr<Element> element_list = getElementList( i + 1 );
       std::shared_ptr<Element> root = createElementTree( element_list );
       relocateElementTree( root );
+      if (root == nullptr) continue;
       if (ElementTree == nullptr) ElementTree = root;
       else ptr->Next = root;
       ptr = root;
