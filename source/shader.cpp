@@ -166,7 +166,8 @@ void ShaderGL::setDynamicSceneUniformLocations(int light_num)
 
 void ShaderGL::setHighQualityAmbientOcclusionUniformLocations()
 {
-   addUniformLocation( "Phase" );
+   addUniformLocation( "FirstPhase" );
+   addUniformLocation( "LastPhase" );
    addUniformLocation( "Side" );
    addUniformLocation( "DiskSize" );
    addUniformLocation( "RootIndex" );

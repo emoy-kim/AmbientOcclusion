@@ -18,7 +18,8 @@ struct Disk
 layout (binding = 0, std430) buffer InDisks { Disk in_disks[]; };
 layout (binding = 1, std430) buffer OutDisks { Disk out_disks[]; };
 
-uniform int Phase;
+uniform int FirstPhase;
+uniform int LastPhase;
 uniform int Side;
 uniform int DiskSize;
 uniform int RootIndex;
@@ -69,7 +70,7 @@ void main()
       }
       v *= inversesqrt( squared_distance );
       float shadow = getShadowApproximation( v, squared_distance, receiver_normal, emitter_normal, emitter_area );
-      if (Phase > 1) shadow *= in_disks[emitter_index].Accessibility;
+      if (!bool(FirstPhase)) shadow *= in_disks[emitter_index].Accessibility;
       shadow /= (one + DistanceAttenuation * sqrt( squared_distance ));
 
       total_shadow += shadow;
@@ -78,5 +79,12 @@ void main()
    }
    bent_normal = normalize( bent_normal );
    out_disks[index].BentNormal = bent_normal;
-   out_disks[index].Accessibility = clamp( one - total_shadow, zero, one );
+
+   if (bool(LastPhase)) {
+      float accessibility = clamp( one - total_shadow, zero, one );
+      float previous_accessibility = in_disks[index].Accessibility;
+      out_disks[index].Accessibility =
+         mix( min( previous_accessibility, accessibility ), max( previous_accessibility, accessibility ), 0.3f );
+   }
+   else out_disks[index].Accessibility = clamp( one - total_shadow, zero, one );
 }
