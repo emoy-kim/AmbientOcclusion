@@ -2,7 +2,7 @@
 
 RendererGL::RendererGL() :
    Window( nullptr ), Pause( false ), UseBentNormal( true ), FrameWidth( 1920 ), FrameHeight( 1080 ),
-   ActiveLightIndex( 0 ), PassNum( 2 ), ClickedPoint( -1, -1 ), Texter( std::make_unique<TextGL>() ),
+   ActiveLightIndex( 0 ), PassNum( 3 ), ClickedPoint( -1, -1 ), Texter( std::make_unique<TextGL>() ),
    MainCamera( std::make_unique<CameraGL>() ), TextCamera( std::make_unique<CameraGL>() ),
    TextShader( std::make_unique<ShaderGL>() ), Lights( std::make_unique<LightGL>() ), Dynamic(), HighQuality(),
    AlgorithmToCompare( ALGORITHM_TO_COMPARE::DYNAMIC )
@@ -104,40 +104,43 @@ void RendererGL::keyboard(GLFWwindow* window, int key, int scancode, int action,
       case GLFW_KEY_1:
          if (!Renderer->Pause) {
             Renderer->AlgorithmToCompare = ALGORITHM_TO_COMPARE::DYNAMIC;
-            std::cout << "Dynamic Ambient Occlusion Algorithm Selected\n";
+            std::cout << ">> Dynamic Ambient Occlusion Algorithm Selected\n";
          }
          break;
       case GLFW_KEY_2:
          if (!Renderer->Pause) {
             Renderer->AlgorithmToCompare = ALGORITHM_TO_COMPARE::HIGH_QUALITY;
-            std::cout << "High Quality Ambient Occlusion Algorithm Selected\n";
+            std::cout << ">> High Quality Ambient Occlusion Algorithm Selected ";
+            if (Renderer->HighQuality.BunnyObject->robust()) std::cout << "(Robust)\n";
+            else std::cout << "(Non-Robust)\n";
          }
          break;
       case GLFW_KEY_UP:
          if (!Renderer->Pause) {
             Renderer->PassNum++;
-            std::cout << "Pass Num: " << Renderer->PassNum << std::endl;
+            std::cout << ">> Pass Num: " << Renderer->PassNum << std::endl;
          }
          break;
       case GLFW_KEY_DOWN:
          if (!Renderer->Pause) {
             Renderer->PassNum--;
-            if (Renderer->PassNum < 1) Renderer->PassNum = 1;
-            std::cout << "Pass Num: " << Renderer->PassNum << std::endl;
+            if (Renderer->PassNum < 2) Renderer->PassNum = 2;
+            std::cout << ">> Pass Num: " << Renderer->PassNum << std::endl;
          }
          break;
       case GLFW_KEY_B:
          if (!Renderer->Pause) {
             Renderer->UseBentNormal = !Renderer->UseBentNormal;
-            if (Renderer->UseBentNormal) std::cout << "Bent Normal Used\n";
-            else std::cout << "Original Normal Used\n";
+            if (Renderer->UseBentNormal) std::cout << ">> Bent Normal Used\n";
+            else std::cout << ">> Original Normal Used\n";
          }
          break;
       case GLFW_KEY_R:
          if (!Renderer->Pause && Renderer->AlgorithmToCompare == ALGORITHM_TO_COMPARE::HIGH_QUALITY) {
             Renderer->HighQuality.BunnyObject->toggleRobustSwitch();
-            if (Renderer->HighQuality.BunnyObject->robust()) std::cout << "High-Quality Processed\n";
-            else std::cout << "Low-Quality Processed\n";
+            std::cout << ">> High Quality Ambient Occlusion Algorithm Selected ";
+            if (Renderer->HighQuality.BunnyObject->robust()) std::cout << "(Robust)\n";
+            else std::cout << "(Non-Robust)\n";
          }
          break;
       case GLFW_KEY_E:
@@ -146,7 +149,7 @@ void RendererGL::keyboard(GLFWwindow* window, int key, int scancode, int action,
                Renderer->HighQuality.BunnyObject->adjustProximityTolerance( 1.0f );
             }
             else Renderer->HighQuality.BunnyObject->adjustProximityTolerance( -1.0f );
-            std::cout << "ProximityTolerance: " << Renderer->HighQuality.BunnyObject->getProximityTolerance() << "\n";
+            std::cout << ">> ProximityTolerance: " << Renderer->HighQuality.BunnyObject->getProximityTolerance() << "\n";
          }
          break;
       case GLFW_KEY_D:
@@ -155,7 +158,7 @@ void RendererGL::keyboard(GLFWwindow* window, int key, int scancode, int action,
                Renderer->HighQuality.BunnyObject->adjustDistanceAttenuation( 0.1f );
             }
             else Renderer->HighQuality.BunnyObject->adjustDistanceAttenuation( -0.1f );
-            std::cout << "DistanceAttenuation: " << Renderer->HighQuality.BunnyObject->getDistanceAttenuation() << "\n";
+            std::cout << ">> DistanceAttenuation: " << Renderer->HighQuality.BunnyObject->getDistanceAttenuation() << "\n";
          }
          break;
       case GLFW_KEY_T:
@@ -164,7 +167,7 @@ void RendererGL::keyboard(GLFWwindow* window, int key, int scancode, int action,
                Renderer->HighQuality.BunnyObject->adjustTriangleAttenuation( 0.1f );
             }
             else Renderer->HighQuality.BunnyObject->adjustTriangleAttenuation( -0.1f );
-            std::cout << "TriangleAttenuation: " << Renderer->HighQuality.BunnyObject->getTriangleAttenuation() << "\n";
+            std::cout << ">> TriangleAttenuation: " << Renderer->HighQuality.BunnyObject->getTriangleAttenuation() << "\n";
          }
          break;
       case GLFW_KEY_C:
@@ -172,11 +175,11 @@ void RendererGL::keyboard(GLFWwindow* window, int key, int scancode, int action,
          break;
       case GLFW_KEY_L:
          Renderer->Lights->toggleLightSwitch();
-         std::cout << "Light Turned " << (Renderer->Lights->isLightOn() ? "On!\n" : "Off!\n");
+         std::cout << ">> Light Turned " << (Renderer->Lights->isLightOn() ? "On!\n" : "Off!\n");
          break;
       case GLFW_KEY_P: {
          const glm::vec3 pos = Renderer->MainCamera->getCameraPosition();
-         std::cout << "Camera Position: " << pos.x << ", " << pos.y << ", " << pos.z << "\n";
+         std::cout << ">> Camera Position: " << pos.x << ", " << pos.y << ", " << pos.z << "\n";
       } break;
       case GLFW_KEY_SPACE:
          Renderer->Pause = !Renderer->Pause;
@@ -330,7 +333,8 @@ void RendererGL::calculateHighQualityAmbientOcclusion(int pass_num) const
    shader->uniform1f( "ProximityTolerance", object->getProximityTolerance() );
    shader->uniform1f( "DistanceAttenuation", object->getDistanceAttenuation() );
    for (int i = 1; i <= pass_num - 1; ++i) {
-      shader->uniform1i( "Phase", i );
+      shader->uniform1i( "FirstPhase", i == 1 ? 1 : 0 );
+      shader->uniform1i( "LastPhase", i == pass_num - 1 ? 1 : 0 );
       glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, object->getInDisksBuffer() );
       glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 1, object->getOutDisksBuffer() );
       glDispatchCompute( g, g, 1 );
@@ -433,8 +437,13 @@ void RendererGL::render()
    const auto fps = 1E+6 / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
 
    std::stringstream text;
+   if (AlgorithmToCompare == ALGORITHM_TO_COMPARE::DYNAMIC) text << "Dynamic Algorithm\n";
+   else if (AlgorithmToCompare == ALGORITHM_TO_COMPARE::HIGH_QUALITY) {
+      text << "High Quality Algorithm ";
+      text << (HighQuality.BunnyObject->robust() ? "(Robust)\n" : "(Non-Robust)\n");
+   }
    text << std::fixed << std::setprecision( 2 ) << fps << " fps";
-   drawText( text.str(), { 80.0f, 50.0f } );
+   drawText( text.str(), { 80.0f, 100.0f } );
 }
 
 void RendererGL::play()
