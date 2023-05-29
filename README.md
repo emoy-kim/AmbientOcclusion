@@ -1,5 +1,9 @@
 # AmbientOcclusion
 
+  This code is about ambient occlusion from GPU Gems 2 & 3.
+  
+  Please refer to [this](https://jeesunkim.com/projects/gpu-gems/ambient_occlusion/) to see the details.
+  
 ![result_merged](https://github.com/emoy-kim/AmbientOcclusion/assets/17864157/daa8fba7-916d-4f1c-84a2-668d62096150)
 
 ## Keyboard Commands
