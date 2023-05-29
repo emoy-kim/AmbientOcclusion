@@ -14,4 +14,5 @@
   * **b key**: toggle bent normal activation when calculating light effects
   * **l key**: toggle light effects
   * **c key**: capture the current frame
+  * **SPACE key**: pause rendering
   * **q/ESC key**: exit
