@@ -4,7 +4,7 @@
   
   Please refer to [this](https://jeesunkim.com/projects/gpu-gems/ambient_occlusion/) to see the details.
   
-![result_merged](https://github.com/emoy-kim/AmbientOcclusion/assets/17864157/daa8fba7-916d-4f1c-84a2-668d62096150)
+![result_merged](https://github.com/emoy-kim/AmbientOcclusion/assets/17864157/7ddd4432-5cb6-40e5-bb0d-05c21e444977)
 
 ## Keyboard Commands
   * **1 key**: select dynamic ambient occlusion algorithm
