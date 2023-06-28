@@ -10,9 +10,9 @@ struct LightInfo
    vec4 DiffuseColor;
    vec4 SpecularColor;
    vec3 SpotlightDirection;
-   float SpotlightExponent;
    float SpotlightCutoffAngle;
-   vec3 AttenuationFactors;
+   float SpotlightFeather;
+   float FallOffRadius;
 };
 uniform LightInfo Lights[MAX_LIGHTS];
 
@@ -68,6 +68,7 @@ layout (location = 0) out vec4 final_color;
 const float zero = 0.0f;
 const float one = 1.0f;
 const float epsilon = 1e-16f;
+const float half_pi = 1.57079632679489661923132169163975144f;
 
 bool IsPointLight(in vec4 light_position)
 {
@@ -76,22 +77,29 @@ bool IsPointLight(in vec4 light_position)
 
 float getAttenuation(in vec3 light_vector, in int light_index)
 {
-   vec3 distance_scale;
-   distance_scale.x = one;
-   distance_scale.z = dot( light_vector, light_vector );
-   distance_scale.y = sqrt( distance_scale.z );
-   return one / dot( distance_scale, Lights[light_index].AttenuationFactors );
+   float squared_distance = dot( light_vector, light_vector );
+   float distance = sqrt( squared_distance );
+   float radius = Lights[light_index].FallOffRadius;
+   if (distance <= radius) return one;
+
+   return clamp( radius * radius / squared_distance, zero, one );
 }
 
 float getSpotlightFactor(in vec3 normalized_light_vector, in int light_index)
 {
    if (Lights[light_index].SpotlightCutoffAngle >= 180.0f) return one;
 
-   vec4 direction_in_ec = transpose( inverse( ViewMatrix ) ) * vec4(Lights[light_index].SpotlightDirection, one);
+   vec4 direction_in_ec = transpose( inverse( ViewMatrix ) ) * vec4(Lights[light_index].SpotlightDirection, zero);
    vec3 normalized_direction = normalize( direction_in_ec.xyz );
-   float cutoff_angle = clamp( Lights[light_index].SpotlightCutoffAngle, zero, 90.0f );
    float factor = dot( -normalized_light_vector, normalized_direction );
-   return factor >= cos( radians( cutoff_angle ) ) ? pow( factor, Lights[light_index].SpotlightExponent ) : zero;
+   float cutoff_angle = radians( clamp( Lights[light_index].SpotlightCutoffAngle, zero, 90.0f ) );
+   if (factor >= cos( cutoff_angle )) {
+      float normalized_angle = acos( factor ) * half_pi / cutoff_angle;
+      float threshold = half_pi * (one - Lights[light_index].SpotlightFeather);
+      return normalized_angle <= threshold ? one :
+         cos( half_pi * (normalized_angle - threshold) / (half_pi - threshold) );
+   }
+   return zero;
 }
 
 vec4 calculateLightingEquation(in vec3 normal)
