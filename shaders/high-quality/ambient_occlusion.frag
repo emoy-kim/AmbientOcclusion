@@ -134,7 +134,7 @@ vec4 calculateLightingEquation(in vec3 normal)
       pow( specular_intensity, Material.SpecularExponent ) * 
       Lights[LightIndex].SpecularColor * Material.SpecularColor;
 
-   color += local_color;
+   color += local_color * final_effect_factor;
    return color;
 }
 
