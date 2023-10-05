@@ -240,8 +240,8 @@ void OcclusionTree::setBuffer()
    const auto disk_size = static_cast<int>(Disks.size());
    const auto index_size = static_cast<int>(IndexBuffer.size());
    const auto vertex_size = static_cast<int>(Vertices.size());
-   addCustomBufferObject<Disk>("in_disks", disk_size );
-   addCustomBufferObject<Disk>("out_disks", disk_size );
+   addCustomBufferObject<Disk>( "in_disks", disk_size );
+   addCustomBufferObject<Disk>( "out_disks", disk_size );
    addCustomBufferObject<int>( "indices", index_size );
    addCustomBufferObject<glm::vec3>( "vertices", vertex_size );
    DisksBuffers[TargetBufferIndex] = getCustomBufferID( "in_disks" );
